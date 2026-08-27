@@ -1,6 +1,5 @@
 import { useMemo } from 'react'
-import { useStore, monthTransactions, monthTotals } from '../store'
-import { CATEGORY_MAP } from '../data/categories'
+import { useStore, useCategoryMap, monthTransactions, monthTotals } from '../store'
 import { formatAmount, dayHeading, monthShort } from '../lib/format'
 import type { Transaction } from '../types'
 
@@ -19,9 +18,9 @@ function groupByDay(txs: Transaction[]) {
   return groups
 }
 
-export default function Home() {
+export default function Home({ onSelect }: { onSelect: (tx: Transaction) => void }) {
   const { transactions, activeMonth } = useStore()
-  const removeTransaction = useStore((s) => s.removeTransaction)
+  const catMap = useCategoryMap()
 
   const monthTxs = useMemo(
     () => monthTransactions(transactions, activeMonth),
@@ -80,13 +79,11 @@ export default function Home() {
               </div>
               <div className="overflow-hidden rounded-card bg-ink-soft">
                 {g.items.map((t, i) => {
-                  const cat = CATEGORY_MAP[t.categoryId]
+                  const cat = catMap[t.categoryId]
                   return (
                     <button
                       key={t.id}
-                      onClick={() => {
-                        if (confirm(`Excluir "${t.note || cat?.label}"?`)) removeTransaction(t.id)
-                      }}
+                      onClick={() => onSelect(t)}
                       className={`flex w-full items-center gap-3 px-3 py-3 text-left active:bg-ink-muted ${
                         i > 0 ? 'border-t border-ink-line' : ''
                       }`}

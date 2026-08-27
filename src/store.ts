@@ -1,26 +1,42 @@
+import { useMemo } from 'react'
 import { create } from 'zustand'
-import type { Transaction } from './types'
-import { loadTransactions, putTransaction, deleteTransaction } from './lib/db'
+import type { Transaction, Category } from './types'
+import {
+  loadTransactions,
+  putTransaction,
+  deleteTransaction,
+  loadCategories,
+  putCategory,
+  deleteCategoryFromDB,
+} from './lib/db'
 import { monthKeyOf, todayISO } from './lib/format'
 
 interface State {
   transactions: Transaction[]
+  categories: Category[]
   loaded: boolean
   activeMonth: string // yyyy-mm
   load: () => Promise<void>
   addTransaction: (tx: Omit<Transaction, 'id' | 'createdAt'>) => Promise<void>
+  updateTransaction: (tx: Transaction) => Promise<void>
   removeTransaction: (id: string) => Promise<void>
+  saveCategory: (cat: Category) => Promise<void>
+  removeCategory: (id: string) => Promise<void>
   setActiveMonth: (month: string) => void
 }
 
 export const useStore = create<State>((set, get) => ({
   transactions: [],
+  categories: [],
   loaded: false,
   activeMonth: monthKeyOf(todayISO()),
 
   load: async () => {
-    const transactions = await loadTransactions()
-    set({ transactions, loaded: true })
+    const [transactions, categories] = await Promise.all([
+      loadTransactions(),
+      loadCategories(),
+    ])
+    set({ transactions, categories: sortCats(categories), loaded: true })
   },
 
   addTransaction: async (input) => {
@@ -33,15 +49,43 @@ export const useStore = create<State>((set, get) => ({
     set({ transactions: [...get().transactions, tx] })
   },
 
+  updateTransaction: async (tx) => {
+    await putTransaction(tx)
+    set({ transactions: get().transactions.map((t) => (t.id === tx.id ? tx : t)) })
+  },
+
   removeTransaction: async (id) => {
     await deleteTransaction(id)
     set({ transactions: get().transactions.filter((t) => t.id !== id) })
   },
 
+  saveCategory: async (cat) => {
+    await putCategory(cat)
+    const rest = get().categories.filter((c) => c.id !== cat.id)
+    set({ categories: sortCats([...rest, cat]) })
+  },
+
+  removeCategory: async (id) => {
+    await deleteCategoryFromDB(id)
+    set({ categories: get().categories.filter((c) => c.id !== id) })
+  },
+
   setActiveMonth: (activeMonth) => set({ activeMonth }),
 }))
 
+function sortCats(cats: Category[]): Category[] {
+  return [...cats].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+}
+
 // ---- selectors (derived helpers) ----
+
+export function useCategoryMap(): Record<string, Category> {
+  const categories = useStore((s) => s.categories)
+  return useMemo(
+    () => Object.fromEntries(categories.map((c) => [c.id, c])),
+    [categories],
+  )
+}
 
 export function monthTransactions(txs: Transaction[], monthKey: string) {
   return txs

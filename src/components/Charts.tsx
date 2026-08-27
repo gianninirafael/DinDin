@@ -1,20 +1,20 @@
 import { useMemo } from 'react'
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts'
-import { useStore, monthTransactions } from '../store'
-import { CATEGORY_MAP } from '../data/categories'
+import { useStore, useCategoryMap, monthTransactions } from '../store'
 import { formatMoney, monthShort } from '../lib/format'
 
 export default function Charts() {
   const { transactions, activeMonth } = useStore()
+  const catMap = useCategoryMap()
 
   const data = useMemo(() => {
     const txs = monthTransactions(transactions, activeMonth).filter((t) => t.kind === 'expense')
     const byCat = new Map<string, number>()
     for (const t of txs) byCat.set(t.categoryId, (byCat.get(t.categoryId) ?? 0) + t.amount)
     return [...byCat.entries()]
-      .map(([id, value]) => ({ id, value, cat: CATEGORY_MAP[id] }))
+      .map(([id, value]) => ({ id, value, cat: catMap[id] }))
       .sort((a, b) => b.value - a.value)
-  }, [transactions, activeMonth])
+  }, [transactions, activeMonth, catMap])
 
   const total = data.reduce((s, d) => s + d.value, 0)
 

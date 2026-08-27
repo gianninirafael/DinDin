@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useStore, availableMonths } from './store'
 import { monthLabel } from './lib/format'
+import type { Transaction } from './types'
 import Home from './components/Home'
 import Charts from './components/Charts'
 import AddSheet from './components/AddSheet'
@@ -11,7 +12,14 @@ export default function App() {
   const { load, loaded, transactions, activeMonth, setActiveMonth } = useStore()
   const [tab, setTab] = useState<Tab>('home')
   const [adding, setAdding] = useState(false)
+  const [editingTx, setEditingTx] = useState<Transaction | null>(null)
   const [monthOpen, setMonthOpen] = useState(false)
+
+  const sheetOpen = adding || !!editingTx
+  const closeSheet = () => {
+    setAdding(false)
+    setEditingTx(null)
+  }
 
   useEffect(() => {
     load()
@@ -25,7 +33,7 @@ export default function App() {
 
   return (
     <div className="min-h-full bg-ink">
-      {tab === 'home' ? <Home /> : <Charts />}
+      {tab === 'home' ? <Home onSelect={setEditingTx} /> : <Charts />}
 
       {/* Month picker button (top-right floating) */}
       <button
@@ -83,7 +91,7 @@ export default function App() {
         </button>
       </nav>
 
-      {adding && <AddSheet onClose={() => setAdding(false)} />}
+      {sheetOpen && <AddSheet editing={editingTx} onClose={closeSheet} />}
     </div>
   )
 }

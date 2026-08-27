@@ -3,9 +3,10 @@ export type TxKind = 'expense' | 'income' | 'transfer'
 export interface Category {
   id: string
   label: string
-  icon: string // lucide-style key we map to an emoji/glyph for now
+  icon: string // emoji glyph shown in the bubble
   color: string // hex used for the icon bubble
   kind: TxKind | 'both'
+  order?: number // sort position within the picker
 }
 
 export interface Transaction {

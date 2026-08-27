@@ -25,7 +25,3 @@ export const DEFAULT_CATEGORIES: Category[] = [
   { id: 'extra', label: 'Extra', icon: '✨', color: '#f5d76e', kind: 'income' },
   { id: 'vendas', label: 'Vendas', icon: '🤝', color: '#8ed99a', kind: 'income' },
 ]
-
-export const CATEGORY_MAP = Object.fromEntries(
-  DEFAULT_CATEGORIES.map((c) => [c.id, c]),
-) as Record<string, Category>

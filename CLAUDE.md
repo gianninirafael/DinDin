@@ -65,9 +65,10 @@ src/
     db.ts               IndexedDB CRUD (openDB, load/put/delete)
     format.ts           BRL currency + pt-BR date formatting helpers
   components/
-    Home.tsx            Month summary + day-grouped transaction list
+    Home.tsx            Month summary + day-grouped list; tap a row to edit it
     Charts.tsx          Expense-by-category donut + breakdown
-    AddSheet.tsx        Full-screen add flow (tabs, category grid, keypad)
+    AddSheet.tsx        Full-screen add/edit flow (tabs, category grid, keypad)
+    CategoryEditor.tsx  Create/edit/delete a category (name, emoji, color, kind)
   App.tsx               Shell: bottom nav, month picker, add button
 ```
 
@@ -77,9 +78,16 @@ src/
   from `kind` (expense = red/minus, income = green/plus).
 - Currency is BRL, formatted via `src/lib/format.ts` — never hand-format money.
 - Dates are ISO `yyyy-mm-dd` strings; the active month is a `yyyy-mm` key.
-- Add categories by editing `src/data/categories.ts` (each needs a unique `id`,
-  a `kind`, an emoji `icon`, and a `color`). Icons are emoji for now; a real
-  icon set can replace them later.
+- **Categories live in IndexedDB** (a `categories` store), seeded once from
+  `src/data/categories.ts` on first run. After that they're managed **in-app**
+  from the Add sheet ("Editar" toggle → tap to edit, or the "Nova" tile to
+  create). Edit `src/data/categories.ts` only to change the initial seed for
+  fresh installs. Look categories up via the `useCategoryMap()` hook in
+  `store.ts`, never by importing the seed array. Icons are emoji.
+- Deleting a category leaves old transactions pointing at a missing id; the UI
+  renders a `❓` / "Sem categoria" fallback for those — keep that graceful.
+- Tapping a transaction opens the Add sheet in **edit** mode (`editing` prop);
+  the same sheet handles create, update, and delete.
 - Keep everything client-side. Do not add network requests, analytics, or any
   code that transmits the owner's financial data.
 
@@ -97,8 +105,7 @@ Always run `npm run build` before committing — it typechecks the whole project
 
 - Transfers are selectable but treated like a plain entry (no account model yet).
 - Reports screen, search, calendar view, budgets/goals.
-- Category management UI (add/edit/reorder from within the app).
-- Editing an existing transaction (currently tap-to-delete only).
+- Category **reordering** (create/edit/delete already done in-app).
 - Optional cloud sync / export-import.
 - Installable PWA manifest + service worker.
 ```
