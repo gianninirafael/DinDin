@@ -47,7 +47,7 @@ export default function AddSheet({ onClose }: { onClose: () => void }) {
   const canSave = amount > 0 && !!categoryId
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-neutral-950 text-white">
+    <div className="fixed inset-0 z-50 flex flex-col bg-ink text-white">
       {/* Header */}
       <div className="flex items-center justify-between px-5 pt-4 pb-3">
         <button onClick={onClose} className="text-base text-neutral-300">
@@ -106,7 +106,13 @@ export default function AddSheet({ onClose }: { onClose: () => void }) {
 
       {/* Amount */}
       <div className="px-6 pb-2 pt-3 text-right">
-        <span className="tnum text-5xl font-bold tracking-tight">{formatAmount(amount)}</span>
+        <span
+          className={`tnum text-6xl font-extrabold tracking-tight ${
+            amount > 0 ? 'text-white' : 'text-neutral-600'
+          }`}
+        >
+          {formatAmount(amount)}
+        </span>
       </div>
 
       {/* Note */}
@@ -139,8 +145,8 @@ export default function AddSheet({ onClose }: { onClose: () => void }) {
           <button
             onClick={confirm}
             disabled={!canSave}
-            className={`row-span-3 rounded-2xl text-2xl font-semibold transition ${
-              canSave ? 'bg-brand-500 text-white' : 'bg-neutral-800/50 text-neutral-600'
+            className={`row-span-3 rounded-2xl text-2xl font-bold transition ${
+              canSave ? 'bg-brand-500 text-black' : 'bg-neutral-800/50 text-neutral-600'
             }`}
           >
             ✓

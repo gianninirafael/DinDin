@@ -4,7 +4,7 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: light dark;
+  color-scheme: dark;
 }
 
 html,
@@ -14,7 +14,7 @@ body,
 }
 
 body {
-  @apply bg-neutral-50 text-ink antialiased;
+  @apply bg-ink text-white antialiased;
   margin: 0;
 }
 

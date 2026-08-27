@@ -18,33 +18,33 @@ export default function App() {
   }, [load])
 
   if (!loaded) {
-    return <div className="grid h-full place-items-center text-neutral-400">Carregando…</div>
+    return <div className="grid h-full place-items-center text-neutral-500">Carregando…</div>
   }
 
   const months = availableMonths(transactions)
 
   return (
-    <div className="min-h-full bg-neutral-50">
+    <div className="min-h-full bg-ink">
       {tab === 'home' ? <Home /> : <Charts />}
 
       {/* Month picker button (top-right floating) */}
       <button
         onClick={() => setMonthOpen(true)}
-        className="fixed right-4 top-6 z-20 rounded-full bg-white px-3 py-1.5 text-sm font-medium shadow-card"
+        className="fixed right-4 top-7 z-20 rounded-full bg-ink-muted px-3.5 py-1.5 text-sm font-semibold text-white active:bg-ink-line"
       >
         {monthLabel(activeMonth)} ▾
       </button>
 
       {monthOpen && (
         <div
-          className="fixed inset-0 z-40 flex items-end bg-black/40"
+          className="fixed inset-0 z-40 flex items-end bg-black/60"
           onClick={() => setMonthOpen(false)}
         >
           <div
-            className="w-full rounded-t-3xl bg-white p-4 pb-8"
+            className="w-full rounded-t-3xl bg-ink-soft p-4 pb-8"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-neutral-200" />
+            <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-ink-line" />
             <h3 className="mb-2 px-2 text-sm font-semibold text-neutral-500">Escolher mês</h3>
             <div className="max-h-72 space-y-1 overflow-y-auto">
               {months.map((mo) => (
@@ -55,7 +55,9 @@ export default function App() {
                     setMonthOpen(false)
                   }}
                   className={`w-full rounded-xl px-4 py-3 text-left text-[15px] ${
-                    mo === activeMonth ? 'bg-brand-50 font-semibold text-brand-700' : 'text-ink'
+                    mo === activeMonth
+                      ? 'bg-brand-500 font-bold text-black'
+                      : 'text-white active:bg-ink-muted'
                   }`}
                 >
                   {monthLabel(mo)}
@@ -67,15 +69,15 @@ export default function App() {
       )}
 
       {/* Bottom nav */}
-      <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-neutral-200 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-lg items-center justify-around px-6 py-2">
+      <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-ink-line bg-ink/95 backdrop-blur">
+        <div className="mx-auto flex max-w-lg items-center justify-around px-6 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
           <NavBtn label="Início" active={tab === 'home'} onClick={() => setTab('home')} icon="🏠" />
           <div className="w-16" />
           <NavBtn label="Gráficos" active={tab === 'charts'} onClick={() => setTab('charts')} icon="📊" />
         </div>
         <button
           onClick={() => setAdding(true)}
-          className="absolute -top-6 left-1/2 grid h-14 w-14 -translate-x-1/2 place-items-center rounded-full bg-brand-500 text-3xl text-white shadow-lg active:scale-95"
+          className="absolute -top-6 left-1/2 grid h-14 w-14 -translate-x-1/2 place-items-center rounded-full bg-brand-500 text-3xl font-light text-black shadow-lg shadow-brand-500/20 active:scale-95"
         >
           +
         </button>
@@ -100,7 +102,7 @@ function NavBtn({
   return (
     <button onClick={onClick} className="flex flex-col items-center gap-0.5">
       <span className={`text-xl ${active ? '' : 'opacity-40 grayscale'}`}>{icon}</span>
-      <span className={`text-xs ${active ? 'font-semibold text-brand-600' : 'text-neutral-400'}`}>
+      <span className={`text-xs ${active ? 'font-semibold text-brand-400' : 'text-neutral-500'}`}>
         {label}
       </span>
     </button>

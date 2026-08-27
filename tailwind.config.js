@@ -5,24 +5,26 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Brand accent — Wise-inspired but neutral-forward. Easy to re-theme.
+        // Brand accent — high-contrast yellow (Wise-style pop on a dark UI).
+        // Use dark text on brand-400/500. Change here to re-theme the whole app.
         brand: {
-          50: '#eefdf3',
-          100: '#d6f9e2',
-          200: '#aff2c8',
-          300: '#79e5a6',
-          400: '#3fd07f',
-          500: '#16b364', // primary accent
-          600: '#0a9152',
-          700: '#0a7444',
-          800: '#0c5c39',
-          900: '#0b4b30',
+          50: '#fffbeb',
+          100: '#fef3c7',
+          200: '#fde68a',
+          300: '#fcd34d',
+          400: '#ffcc33',
+          500: '#ffc400', // primary accent (buttons, selected states)
+          600: '#e0a800',
+          700: '#b58600',
+          800: '#8a6600',
+          900: '#5c4400',
         },
-        // Surfaces — high-contrast, Wise-like
+        // Dark surfaces — near-black, layered for depth
         ink: {
-          DEFAULT: '#0e0f11',
-          soft: '#16181c',
-          muted: '#22252b',
+          DEFAULT: '#0b0c0e', // app background
+          soft: '#16181c', // cards
+          muted: '#22252b', // inputs / raised chips
+          line: '#2a2d33', // hairline borders
         },
       },
       fontFamily: {

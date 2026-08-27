@@ -24,21 +24,27 @@ with a cleaner, bolder UI. Portuguese (pt-BR) is the primary language.
 
 ## Design language
 
-Inspired by **Wise**: strong contrast, big bold numbers, generous spacing,
-clean rounded cards on a light background. NOT locked to Wise's green — the
-accent lives in one place and is easy to reswap.
+**Dark theme, Wise-inspired**, with a high-contrast **yellow** accent (the owner
+explicitly chose yellow over Wise's neon green). Strong contrast, big bold
+numbers, generous spacing, pill buttons, layered near-black surfaces.
 
-- **Money is the hero.** Large, bold, `tabular-nums` (use the `.tnum` class).
-- Light UI surfaces (`neutral-50` bg, white cards, `shadow-card`), except the
-  Add sheet which is a full-screen **dark** panel like the reference.
-- Accent color = `brand.*` in `tailwind.config.js`. Change the palette there to
-  re-theme the whole app.
-- Category color bubbles: icon on a tinted circle (`color + '55'`).
-- Rounded corners: `rounded-card` (20px) for cards, full rounds for bubbles/chips.
+- **Money is the hero.** Large, extra-bold, `tabular-nums` (use the `.tnum`
+  class). Home leads with the month balance in a big number.
+- Dark surfaces from `ink.*`: `ink` (#0b0c0e app bg), `ink-soft` (cards),
+  `ink-muted` (inputs/chips), `ink-line` (hairlines). Text is white / neutral-500.
+- Accent = `brand.*` in `tailwind.config.js` — a punchy yellow. **Always put
+  dark text on yellow** (`text-black`), never white. Change the palette there to
+  re-theme the whole app in one place.
+- Semantic amounts: expense = white or `rose-400` with `−`, income =
+  `emerald-400` with `+`. Yellow is reserved for the brand/primary actions, not
+  for income.
+- Category color bubbles: icon on a tinted circle (`color + '33'` on dark).
+- Rounded corners: `rounded-card` (20px) for cards, full rounds for bubbles,
+  pills/chips for buttons and toggles.
 - Font: Inter.
 
-When the owner shares Wise screenshots, match spacing/typography/contrast from
-them — treat those as the source of truth for visual polish.
+When the owner shares more Wise screenshots, match spacing/typography/contrast
+from them — treat those as the source of truth for visual polish.
 
 ## Tech stack
 

@@ -33,31 +33,33 @@ export default function Home() {
 
   return (
     <div className="mx-auto max-w-lg pb-28">
-      {/* Summary header */}
-      <div className="sticky top-0 z-10 bg-neutral-50/90 px-5 pt-6 pb-4 backdrop-blur">
-        <h1 className="text-2xl font-extrabold tracking-tight text-ink">DinDin</h1>
-        <div className="mt-4 flex items-stretch gap-3">
-          <div className="grid w-16 flex-shrink-0 place-items-center rounded-card bg-ink text-white">
-            <span className="text-lg font-bold leading-none">{y}</span>
-            <span className="text-sm text-neutral-300">{monthShort(activeMonth).toLowerCase()}.</span>
-          </div>
-          <div className="grid flex-1 grid-cols-3 gap-2">
-            <Stat label="Despesas" value={totals.expense} tone="text-rose-500" />
-            <Stat label="Receitas" value={totals.income} tone="text-brand-600" />
-            <Stat
-              label="Saldo"
-              value={totals.balance}
-              tone={totals.balance < 0 ? 'text-rose-500' : 'text-ink'}
-              signed
-            />
-          </div>
+      {/* Hero: month balance */}
+      <div className="px-5 pt-8 pb-5">
+        <p className="text-sm font-medium uppercase tracking-wide text-neutral-500">Saldo do mês</p>
+        <div className="mt-1 flex items-end gap-2">
+          <span
+            className={`tnum text-5xl font-extrabold tracking-tight ${
+              totals.balance < 0 ? 'text-white' : 'text-brand-400'
+            }`}
+          >
+            {totals.balance < 0 ? '−' : ''}
+            {formatAmount(totals.balance)}
+          </span>
+          <span className="pb-1.5 text-base font-semibold text-neutral-500">BRL</span>
+        </div>
+
+        <div className="mt-5 grid grid-cols-2 gap-3">
+          <MiniStat label="Despesas" value={totals.expense} tone="text-rose-400" prefix="−" />
+          <MiniStat label="Receitas" value={totals.income} tone="text-emerald-400" prefix="+" />
         </div>
       </div>
 
       {/* Day groups */}
       {groups.length === 0 && (
-        <div className="px-6 py-24 text-center text-neutral-400">
-          <p className="text-lg font-medium">Sem lançamentos em {monthShort(activeMonth)}/{y}</p>
+        <div className="px-6 py-24 text-center text-neutral-500">
+          <p className="text-lg font-semibold text-neutral-300">
+            Sem lançamentos em {monthShort(activeMonth)}/{y}
+          </p>
           <p className="mt-1 text-sm">Toque no + para adicionar sua primeira transação.</p>
         </div>
       )}
@@ -69,14 +71,14 @@ export default function Home() {
             <div key={g.date} className="pt-3">
               <div className="flex items-baseline justify-between px-2 pb-2">
                 <div className="flex items-baseline gap-2">
-                  <span className="text-sm font-semibold text-ink">{h.day}</span>
-                  <span className="text-xs text-neutral-400">{h.weekday}</span>
+                  <span className="text-sm font-semibold text-white">{h.day}</span>
+                  <span className="text-xs text-neutral-500">{h.weekday}</span>
                 </div>
-                <span className="tnum text-xs text-neutral-400">
-                  Despesas: {formatAmount(g.expense)}
+                <span className="tnum text-xs text-neutral-500">
+                  −{formatAmount(g.expense)}
                 </span>
               </div>
-              <div className="overflow-hidden rounded-card bg-white shadow-card">
+              <div className="overflow-hidden rounded-card bg-ink-soft">
                 {g.items.map((t, i) => {
                   const cat = CATEGORY_MAP[t.categoryId]
                   return (
@@ -85,25 +87,25 @@ export default function Home() {
                       onClick={() => {
                         if (confirm(`Excluir "${t.note || cat?.label}"?`)) removeTransaction(t.id)
                       }}
-                      className={`flex w-full items-center gap-3 px-3 py-3 text-left active:bg-neutral-50 ${
-                        i > 0 ? 'border-t border-neutral-100' : ''
+                      className={`flex w-full items-center gap-3 px-3 py-3 text-left active:bg-ink-muted ${
+                        i > 0 ? 'border-t border-ink-line' : ''
                       }`}
                     >
                       <span
                         className="grid h-11 w-11 flex-shrink-0 place-items-center rounded-full text-lg"
-                        style={{ background: (cat?.color ?? '#ddd') + '55' }}
+                        style={{ background: (cat?.color ?? '#666') + '33' }}
                       >
                         {cat?.icon ?? '❓'}
                       </span>
-                      <span className="min-w-0 flex-1 truncate text-[15px] font-medium text-ink">
+                      <span className="min-w-0 flex-1 truncate text-[15px] font-medium text-white">
                         {t.note || cat?.label || 'Sem categoria'}
                       </span>
                       <span
                         className={`tnum text-[15px] font-semibold ${
-                          t.kind === 'income' ? 'text-brand-600' : 'text-ink'
+                          t.kind === 'income' ? 'text-emerald-400' : 'text-white'
                         }`}
                       >
-                        {t.kind === 'income' ? '+' : '-'} {formatAmount(t.amount)}
+                        {t.kind === 'income' ? '+' : '−'} {formatAmount(t.amount)}
                       </span>
                     </button>
                   )
@@ -117,24 +119,24 @@ export default function Home() {
   )
 }
 
-function Stat({
+function MiniStat({
   label,
   value,
   tone,
-  signed,
+  prefix,
 }: {
   label: string
   value: number
   tone: string
-  signed?: boolean
+  prefix: string
 }) {
   return (
-    <div className="flex flex-col justify-center rounded-card bg-white px-3 py-2 shadow-card">
-      <span className="text-xs text-neutral-400">{label}</span>
-      <span className={`tnum text-lg font-bold leading-tight ${tone}`}>
-        {signed && value < 0 ? '- ' : ''}
+    <div className="rounded-card bg-ink-soft px-4 py-3">
+      <span className="text-xs font-medium text-neutral-500">{label}</span>
+      <div className={`tnum mt-0.5 text-xl font-bold ${tone}`}>
+        {value > 0 ? prefix : ''}
         {formatAmount(value)}
-      </span>
+      </div>
     </div>
   )
 }
