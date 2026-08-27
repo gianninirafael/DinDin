@@ -51,6 +51,16 @@ export function todayISO(): string {
   return new Date().toISOString().slice(0, 10)
 }
 
+/** yyyy-mm-dd → dd/mm/yyyy */
+export function formatDMY(iso: string): string {
+  const [y, m, d] = iso.split('-')
+  return `${d}/${m}/${y}`
+}
+
+export function isToday(iso: string): boolean {
+  return iso === todayISO()
+}
+
 export function monthKeyOf(iso: string): string {
   return iso.slice(0, 7)
 }

@@ -69,6 +69,7 @@ src/
     Charts.tsx          Expense-by-category donut + breakdown
     AddSheet.tsx        Full-screen add/edit flow (tabs, category grid, keypad)
     CategoryEditor.tsx  Create/edit/delete a category (name, emoji, color, kind)
+    ReorderSheet.tsx    Popup list to reorder categories (up/down, per kind)
   App.tsx               Shell: bottom nav, month picker, add button
 ```
 
@@ -78,6 +79,15 @@ src/
   from `kind` (expense = red/minus, income = green/plus).
 - Currency is BRL, formatted via `src/lib/format.ts` — never hand-format money.
 - Dates are ISO `yyyy-mm-dd` strings; the active month is a `yyyy-mm` key.
+  Show dates to the user as **dd/mm/yyyy** via `formatDMY()`. The Add sheet
+  picks dates with a hidden native `<input type="date">` opened by the Data
+  button (`showPicker()`).
+- **Sticky date:** new entries default to the last date the owner used
+  (persisted in `localStorage` as `dindin.lastDate` and mirrored in the store),
+  not to today — a deliberate time-saver for entering a batch on one day.
+- Category order is a per-category `order` field; reorder via `moveCategory`
+  (swaps neighbours) in the ReorderSheet. Reordering is scoped to the current
+  kind (expense/income), which also includes `both` categories.
 - **Categories live in IndexedDB** (a `categories` store), seeded once from
   `src/data/categories.ts` on first run. After that they're managed **in-app**
   from the Add sheet ("Editar" toggle → tap to edit, or the "Nova" tile to
@@ -105,7 +115,8 @@ Always run `npm run build` before committing — it typechecks the whole project
 
 - Transfers are selectable but treated like a plain entry (no account model yet).
 - Reports screen, search, calendar view, budgets/goals.
-- Category **reordering** (create/edit/delete already done in-app).
-- Optional cloud sync / export-import.
+- **Voice entry** (dictate "nome - valor - data" lines to add many at once).
+- **Export to Google Sheets / CSV.**
+- Optional cloud sync.
 - Installable PWA manifest + service worker.
 ```

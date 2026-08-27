@@ -11,17 +11,29 @@ import {
 } from './lib/db'
 import { monthKeyOf, todayISO } from './lib/format'
 
+const LAST_DATE_KEY = 'dindin.lastDate'
+
+function readLastDate(): string {
+  try {
+    return localStorage.getItem(LAST_DATE_KEY) || todayISO()
+  } catch {
+    return todayISO()
+  }
+}
+
 interface State {
   transactions: Transaction[]
   categories: Category[]
   loaded: boolean
   activeMonth: string // yyyy-mm
+  lastDate: string // remembered date for the next new entry
   load: () => Promise<void>
   addTransaction: (tx: Omit<Transaction, 'id' | 'createdAt'>) => Promise<void>
   updateTransaction: (tx: Transaction) => Promise<void>
   removeTransaction: (id: string) => Promise<void>
   saveCategory: (cat: Category) => Promise<void>
   removeCategory: (id: string) => Promise<void>
+  moveCategory: (kind: Category['kind'], id: string, dir: -1 | 1) => Promise<void>
   setActiveMonth: (month: string) => void
 }
 
@@ -30,6 +42,7 @@ export const useStore = create<State>((set, get) => ({
   categories: [],
   loaded: false,
   activeMonth: monthKeyOf(todayISO()),
+  lastDate: readLastDate(),
 
   load: async () => {
     const [transactions, categories] = await Promise.all([
@@ -46,7 +59,12 @@ export const useStore = create<State>((set, get) => ({
       createdAt: Date.now(),
     }
     await putTransaction(tx)
-    set({ transactions: [...get().transactions, tx] })
+    try {
+      localStorage.setItem(LAST_DATE_KEY, tx.date)
+    } catch {
+      // ignore storage failures
+    }
+    set({ transactions: [...get().transactions, tx], lastDate: tx.date })
   },
 
   updateTransaction: async (tx) => {
@@ -68,6 +86,29 @@ export const useStore = create<State>((set, get) => ({
   removeCategory: async (id) => {
     await deleteCategoryFromDB(id)
     set({ categories: get().categories.filter((c) => c.id !== id) })
+  },
+
+  // Swap a category with its same-kind neighbour in the given direction.
+  moveCategory: async (kind, id, dir) => {
+    const all = get().categories
+    const siblings = sortCats(all.filter((c) => c.kind === kind || c.kind === 'both'))
+    const idx = siblings.findIndex((c) => c.id === id)
+    const swapIdx = idx + dir
+    if (idx < 0 || swapIdx < 0 || swapIdx >= siblings.length) return
+
+    const a = siblings[idx]
+    const b = siblings[swapIdx]
+    const aOrder = a.order ?? idx
+    const bOrder = b.order ?? swapIdx
+    const updatedA = { ...a, order: bOrder }
+    const updatedB = { ...b, order: aOrder }
+
+    await Promise.all([putCategory(updatedA), putCategory(updatedB)])
+    const map = new Map([
+      [updatedA.id, updatedA],
+      [updatedB.id, updatedB],
+    ])
+    set({ categories: sortCats(all.map((c) => map.get(c.id) ?? c)) })
   },
 
   setActiveMonth: (activeMonth) => set({ activeMonth }),

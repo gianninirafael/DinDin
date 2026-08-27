@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import type { TxKind, Transaction, Category } from '../types'
 import { useStore } from '../store'
-import { formatAmount, todayISO } from '../lib/format'
+import { formatAmount, formatDMY, isToday } from '../lib/format'
 import CategoryEditor from './CategoryEditor'
+import ReorderSheet from './ReorderSheet'
 
 const KIND_TABS: { key: TxKind; label: string }[] = [
   { key: 'expense', label: 'Despesa' },
@@ -24,18 +25,28 @@ export default function AddSheet({
   editing?: Transaction | null
   onClose: () => void
 }) {
-  const { addTransaction, updateTransaction, removeTransaction, categories } = useStore()
+  const { addTransaction, updateTransaction, removeTransaction, categories, lastDate } = useStore()
   const isEdit = !!editing
 
   const [kind, setKind] = useState<TxKind>(editing?.kind ?? 'expense')
   const [categoryId, setCategoryId] = useState<string | null>(editing?.categoryId ?? null)
   const [raw, setRaw] = useState(editing ? amountToRaw(editing.amount) : '0')
   const [note, setNote] = useState(editing?.note ?? '')
-  const [date] = useState(editing?.date ?? todayISO())
+  const [date, setDate] = useState(editing?.date ?? lastDate)
 
   const [manageMode, setManageMode] = useState(false)
   const [catEditorOpen, setCatEditorOpen] = useState(false)
   const [editingCat, setEditingCat] = useState<Category | null>(null)
+  const [reorderOpen, setReorderOpen] = useState(false)
+  const dateInputRef = useRef<HTMLInputElement>(null)
+
+  function openDatePicker() {
+    const el = dateInputRef.current
+    if (!el) return
+    // showPicker() is the reliable way to pop the native calendar on tap
+    if (typeof el.showPicker === 'function') el.showPicker()
+    else el.focus()
+  }
 
   const visibleCats = useMemo(
     () => categories.filter((c) => c.kind === kind || c.kind === 'both'),
@@ -131,9 +142,17 @@ export default function AddSheet({
       </div>
 
       {manageMode && (
-        <p className="mb-2 px-5 text-xs text-brand-400">
-          Toque em uma categoria para editar, ou em + para criar uma nova.
-        </p>
+        <div className="mb-2 flex items-center justify-between px-5">
+          <p className="text-xs text-brand-400">
+            Toque para editar, ou + para criar uma nova.
+          </p>
+          <button
+            onClick={() => setReorderOpen(true)}
+            className="rounded-full bg-ink-muted px-3 py-1 text-xs font-medium text-white"
+          >
+            ↕ Reordenar
+          </button>
+        </div>
       )}
 
       {/* Category grid */}
@@ -213,8 +232,14 @@ export default function AddSheet({
           ))}
         </div>
         <div className="grid grid-rows-4 gap-2">
-          <button className="row-span-1 rounded-2xl bg-neutral-800/70 py-3 text-sm text-brand-400">
-            Hoje
+          <button
+            onClick={openDatePicker}
+            className="row-span-1 flex flex-col items-center justify-center rounded-2xl bg-neutral-800/70 py-1 text-brand-400"
+          >
+            <span className="text-[11px] leading-tight">📅 {isToday(date) ? 'Hoje' : 'Data'}</span>
+            <span className="tnum text-[11px] font-semibold leading-tight text-neutral-300">
+              {formatDMY(date)}
+            </span>
           </button>
           <button
             onClick={handleSave}
@@ -228,6 +253,16 @@ export default function AddSheet({
         </div>
       </div>
 
+      {/* Hidden native date input (opened via the Data button) */}
+      <input
+        ref={dateInputRef}
+        type="date"
+        value={date}
+        onChange={(e) => e.target.value && setDate(e.target.value)}
+        className="pointer-events-none absolute h-0 w-0 opacity-0"
+        tabIndex={-1}
+      />
+
       {catEditorOpen && (
         <CategoryEditor
           category={editingCat}
@@ -235,6 +270,8 @@ export default function AddSheet({
           onClose={() => setCatEditorOpen(false)}
         />
       )}
+
+      {reorderOpen && <ReorderSheet kind={kind} onClose={() => setReorderOpen(false)} />}
     </div>
   )
 }
