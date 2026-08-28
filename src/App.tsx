@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { useStore, availableMonths } from './store'
-import { monthLabel } from './lib/format'
+import { useStore, useCategoryMap, availableMonths } from './store'
+import { monthLabel, todayISO } from './lib/format'
+import { buildCSV, downloadFile } from './lib/export'
 import type { Transaction } from './types'
 import Home from './components/Home'
 import Charts from './components/Charts'
@@ -10,6 +11,12 @@ type Tab = 'home' | 'charts'
 
 export default function App() {
   const { load, loaded, transactions, activeMonth, setActiveMonth } = useStore()
+  const catMap = useCategoryMap()
+
+  function exportCSV() {
+    if (transactions.length === 0) return
+    downloadFile(`dindin-${todayISO()}.csv`, buildCSV(transactions, catMap))
+  }
   const [tab, setTab] = useState<Tab>('home')
   const [adding, setAdding] = useState(false)
   const [editingTx, setEditingTx] = useState<Transaction | null>(null)
@@ -41,6 +48,15 @@ export default function App() {
         className="fixed right-4 top-7 z-20 rounded-full bg-ink-muted px-3.5 py-1.5 text-sm font-semibold text-white active:bg-ink-line"
       >
         {monthLabel(activeMonth)} ▾
+      </button>
+
+      {/* Export CSV (top-left floating) */}
+      <button
+        onClick={exportCSV}
+        aria-label="Exportar CSV"
+        className="fixed left-4 top-7 z-20 grid h-9 w-9 place-items-center rounded-full bg-ink-muted text-base text-white active:bg-ink-line"
+      >
+        ⤓
       </button>
 
       {monthOpen && (
