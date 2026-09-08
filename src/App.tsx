@@ -9,10 +9,11 @@ import type { Transaction } from './types'
 import Home from './components/Home'
 import Charts from './components/Charts'
 import Budget from './components/Budget'
+import Today from './components/Today'
 import AddSheet from './components/AddSheet'
 import VoiceSheet from './components/VoiceSheet'
 
-type Tab = 'home' | 'budget' | 'charts'
+type Tab = 'home' | 'today' | 'budget' | 'charts'
 
 export default function App() {
   const { load, loaded, transactions, categories, activeMonth, setActiveMonth, importBackup } =
@@ -87,7 +88,15 @@ export default function App() {
 
   return (
     <div className="min-h-full bg-ink">
-      {tab === 'home' ? <Home onSelect={setEditingTx} /> : tab === 'budget' ? <Budget /> : <Charts />}
+      {tab === 'home' ? (
+        <Home onSelect={setEditingTx} />
+      ) : tab === 'today' ? (
+        <Today />
+      ) : tab === 'budget' ? (
+        <Budget />
+      ) : (
+        <Charts />
+      )}
 
       {APP_VARIANT && (
         <span className="fixed left-1/2 top-8 z-20 -translate-x-1/2 rounded-full bg-ink-muted px-2 py-0.5 text-[10px] font-bold tracking-wide text-brand-400">
@@ -202,10 +211,11 @@ export default function App() {
 
       {/* Bottom nav */}
       <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-ink-line bg-ink/95 backdrop-blur">
-        <div className="mx-auto flex max-w-lg items-center justify-around px-4 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
+        <div className="mx-auto flex max-w-lg items-center justify-around px-3 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
           <NavBtn label="Início" active={tab === 'home'} onClick={() => setTab('home')} icon="🏠" />
+          <NavBtn label="Hoje" active={tab === 'today'} onClick={() => setTab('today')} icon="☀️" />
+          <div className="w-10" />
           <NavBtn label="Orçamento" active={tab === 'budget'} onClick={() => setTab('budget')} icon="🎯" />
-          <div className="w-12" />
           <NavBtn label="Gráficos" active={tab === 'charts'} onClick={() => setTab('charts')} icon="📊" />
         </div>
         <button

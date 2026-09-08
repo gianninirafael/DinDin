@@ -8,6 +8,7 @@ export interface Category {
   kind: TxKind | 'both'
   order?: number // sort position within the picker
   monthlyBudget?: number // recurring monthly allocation (zero-based), BRL; undefined = unbudgeted
+  countsTowardDailyCap?: boolean // false = fixed/excluded from the daily cap (default true)
 }
 
 export interface Transaction {

@@ -127,6 +127,28 @@ npm run preview  # preview the built app
 
 Always run `npm run build` before committing — it typechecks the whole project.
 
+## v1 / v2 deployment
+
+Two live builds from this one repo, both on GitHub Pages (same origin):
+- **v1 (stable)** = `main` branch → site root `/DinDin/`. Frozen for daily use.
+- **v2 (dev)** = `v2` branch → `/DinDin/v2/`, built with `VITE_DINDIN_NS=dindin_v2`
+  so its IndexedDB + localStorage are fully separate from v1 (see `lib/ns.ts`).
+- The deploy workflow (on `main` + manual dispatch) builds both. To publish v2:
+  push the `v2` branch, then dispatch the `deploy.yml` workflow on `main`.
+- `APP_VARIANT` shows a small "V2" badge; keys default to `dindin` so v1 is
+  untouched.
+
+## v2 budgeting (Fase 1 + 2, on the `v2` branch)
+
+- **Fase 1 — zero-based:** `Category.monthlyBudget` (recurring allocation),
+  `availableToBudget` pool (localStorage via ns). `Budget.tsx` (Orçamento tab)
+  shows pool, "a alocar", and per-category alocado/gasto/restante.
+- **Fase 2 — daily cap:** `lib/budget.ts`. Flexible monthly = sum of budgets of
+  cap-counting categories (`countsTowardDailyCap !== false`); split across the
+  month's days with Fri/Sat weighted `WEEKEND_WEIGHT` (1.5). `Today.tsx` (Hoje
+  tab) shows "posso gastar" for dia/semana/mês = teto − gasto (cap categories),
+  day resets daily, week/month keep counting. Cap toggle set in the Budget sheet.
+
 ## Roadmap / not built yet
 
 - Transfers are selectable but treated like a plain entry (no account model yet).

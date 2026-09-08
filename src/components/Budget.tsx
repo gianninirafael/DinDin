@@ -121,10 +121,11 @@ export default function Budget() {
           title={editing.type === 'available' ? 'Disponível para orçar' : editing.cat.label}
           subtitle={editing.type === 'available' ? 'Quanto você tem pra distribuir este mês' : 'Orçamento mensal desta categoria'}
           initial={editing.type === 'available' ? availableToBudget : editing.cat.monthlyBudget ?? 0}
+          capInitial={editing.type === 'cat' ? editing.cat.countsTowardDailyCap !== false : undefined}
           onClose={() => setEditing(null)}
-          onSave={(value) => {
+          onSave={(value, cap) => {
             if (editing.type === 'available') setAvailableToBudget(value)
-            else saveCategory({ ...editing.cat, monthlyBudget: value || undefined })
+            else saveCategory({ ...editing.cat, monthlyBudget: value || undefined, countsTowardDailyCap: cap })
             setEditing(null)
           }}
         />
@@ -137,16 +138,19 @@ function NumberSheet({
   title,
   subtitle,
   initial,
+  capInitial,
   onClose,
   onSave,
 }: {
   title: string
   subtitle: string
   initial: number
+  capInitial?: boolean
   onClose: () => void
-  onSave: (value: number) => void
+  onSave: (value: number, countsCap?: boolean) => void
 }) {
   const [raw, setRaw] = useState(initial ? initial.toFixed(2).replace('.', ',') : '')
+  const [cap, setCap] = useState(capInitial ?? true)
 
   return (
     <div className="fixed inset-0 z-50 flex items-end bg-black/60" onClick={onClose}>
@@ -165,10 +169,30 @@ function NumberSheet({
             className="tnum w-full bg-transparent py-3.5 text-right text-2xl font-bold text-white outline-none placeholder:text-neutral-600"
           />
         </div>
+
+        {capInitial !== undefined && (
+          <button
+            onClick={() => setCap((v) => !v)}
+            className="mt-3 flex w-full items-center justify-between rounded-2xl bg-ink-muted px-4 py-3 text-left"
+          >
+            <span className="min-w-0 pr-3">
+              <span className="block text-[15px] font-medium text-white">Conta pro teto diário</span>
+              <span className="block text-xs text-neutral-500">Desligue para contas fixas (aluguel, assinaturas)</span>
+            </span>
+            <span
+              className={`relative h-6 w-10 flex-shrink-0 rounded-full transition ${cap ? 'bg-brand-500' : 'bg-ink-line'}`}
+            >
+              <span
+                className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${cap ? 'left-[1.125rem]' : 'left-0.5'}`}
+              />
+            </span>
+          </button>
+        )}
+
         <button
           onClick={() => {
             playClick()
-            onSave(parseNum(raw))
+            onSave(parseNum(raw), capInitial !== undefined ? cap : undefined)
           }}
           className="mt-4 w-full rounded-2xl bg-brand-500 py-4 text-base font-bold text-black active:scale-[0.99]"
         >
