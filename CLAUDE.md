@@ -99,7 +99,17 @@ src/
 - Tapping a transaction opens the Add sheet in **edit** mode (`editing` prop);
   the same sheet handles create, update, and delete.
 - Keep everything client-side. Do not add network requests, analytics, or any
-  code that transmits the owner's financial data.
+  code that transmits the owner's financial data — **with one opt-in exception:
+  voice entry** (below). Never add other network calls.
+- **Voice entry** (`components/VoiceSheet.tsx`, `lib/gemini.ts`, `lib/audio.ts`):
+  the owner records audio (mic → MediaRecorder), it's transcoded to 16 kHz mono
+  WAV (`toWavMono16k`) and sent to the **Gemini API** with the owner's own key
+  to transcribe + structure into rows (name / amount / date / kind / categoryId).
+  A review screen lets them fix everything and pick categories, then
+  `addTransactions` bulk-saves. This is the ONLY network call in the app and
+  only fires when the owner records. The Gemini key lives in `localStorage`
+  (`dindin.geminiKey`) — never hard-code it, never send it anywhere but Google.
+  Reached via the 🎙️ button (secondary FAB above the nav).
 - **Backup/restore & export** live in the top-left "Dados" menu (`App.tsx`):
   CSV export (`lib/export.ts`), full JSON backup, and JSON restore
   (`lib/backup.ts`). Restore is an **upsert by id** via `importBackup` — safe
@@ -121,7 +131,6 @@ Always run `npm run build` before committing — it typechecks the whole project
 
 - Transfers are selectable but treated like a plain entry (no account model yet).
 - Reports screen, search, calendar view, budgets/goals.
-- **Voice entry** (dictate "nome - valor - data" lines to add many at once).
 - Optional cloud sync (data is device-local; JSON backup is the manual bridge).
 - Installable PWA manifest + service worker.
 ```
