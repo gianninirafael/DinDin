@@ -33,6 +33,7 @@ interface State {
   load: () => Promise<void>
   addTransaction: (tx: Omit<Transaction, 'id' | 'createdAt'>) => Promise<void>
   updateTransaction: (tx: Transaction) => Promise<void>
+  addTransactions: (inputs: Omit<Transaction, 'id' | 'createdAt'>[]) => Promise<number>
   removeTransaction: (id: string) => Promise<void>
   saveCategory: (cat: Category) => Promise<void>
   removeCategory: (id: string) => Promise<void>
@@ -74,6 +75,25 @@ export const useStore = create<State>((set, get) => ({
   updateTransaction: async (tx) => {
     await putTransaction(tx)
     set({ transactions: get().transactions.map((t) => (t.id === tx.id ? tx : t)) })
+  },
+
+  addTransactions: async (inputs) => {
+    if (inputs.length === 0) return 0
+    const now = Date.now()
+    const txs: Transaction[] = inputs.map((input, i) => ({
+      ...input,
+      id: crypto.randomUUID(),
+      createdAt: now + i,
+    }))
+    await putManyTransactions(txs)
+    const latest = txs.reduce((a, b) => (a.date >= b.date ? a : b)).date
+    try {
+      localStorage.setItem(LAST_DATE_KEY, latest)
+    } catch {
+      // ignore storage failures
+    }
+    set({ transactions: [...get().transactions, ...txs], lastDate: latest })
+    return txs.length
   },
 
   removeTransaction: async (id) => {

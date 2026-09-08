@@ -8,6 +8,7 @@ import type { Transaction } from './types'
 import Home from './components/Home'
 import Charts from './components/Charts'
 import AddSheet from './components/AddSheet'
+import VoiceSheet from './components/VoiceSheet'
 
 type Tab = 'home' | 'charts'
 
@@ -21,6 +22,7 @@ export default function App() {
   const [editingTx, setEditingTx] = useState<Transaction | null>(null)
   const [monthOpen, setMonthOpen] = useState(false)
   const [dataOpen, setDataOpen] = useState(false)
+  const [voiceOpen, setVoiceOpen] = useState(false)
   const [soundOn, setSoundOnState] = useState(isSoundOn())
   const restoreInputRef = useRef<HTMLInputElement>(null)
 
@@ -178,6 +180,18 @@ export default function App() {
         </div>
       )}
 
+      {/* Voice entry (secondary FAB, above the nav) */}
+      <button
+        onClick={() => {
+          playClick()
+          setVoiceOpen(true)
+        }}
+        aria-label="Ditar contas por voz"
+        className="fixed bottom-[6.25rem] right-4 z-20 grid h-12 w-12 place-items-center rounded-full border border-ink-line bg-ink-soft text-xl shadow-lg active:scale-95"
+      >
+        🎙️
+      </button>
+
       {/* Bottom nav */}
       <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-ink-line bg-ink/95 backdrop-blur">
         <div className="mx-auto flex max-w-lg items-center justify-around px-6 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
@@ -197,6 +211,7 @@ export default function App() {
       </nav>
 
       {sheetOpen && <AddSheet editing={editingTx} onClose={closeSheet} />}
+      {voiceOpen && <VoiceSheet onClose={() => setVoiceOpen(false)} />}
     </div>
   )
 }
