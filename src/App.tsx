@@ -3,6 +3,7 @@ import { useStore, useCategoryMap, availableMonths } from './store'
 import { monthLabel, todayISO } from './lib/format'
 import { buildCSV, downloadFile } from './lib/export'
 import { buildBackup, parseBackup } from './lib/backup'
+import { playClick, isSoundOn, setSoundOn } from './lib/sound'
 import type { Transaction } from './types'
 import Home from './components/Home'
 import Charts from './components/Charts'
@@ -20,7 +21,15 @@ export default function App() {
   const [editingTx, setEditingTx] = useState<Transaction | null>(null)
   const [monthOpen, setMonthOpen] = useState(false)
   const [dataOpen, setDataOpen] = useState(false)
+  const [soundOn, setSoundOnState] = useState(isSoundOn())
   const restoreInputRef = useRef<HTMLInputElement>(null)
+
+  function toggleSound() {
+    const next = !soundOn
+    setSoundOn(next)
+    setSoundOnState(next)
+    if (next) playClick()
+  }
 
   const sheetOpen = adding || !!editingTx
   const closeSheet = () => {
@@ -125,6 +134,12 @@ export default function App() {
                 subtitle="Recupera seus dados de um arquivo salvo"
                 onClick={() => restoreInputRef.current?.click()}
               />
+              <DataAction
+                icon={soundOn ? '🔊' : '🔇'}
+                title={`Som dos toques: ${soundOn ? 'ligado' : 'desligado'}`}
+                subtitle="Clique suave ao tocar nos botões"
+                onClick={toggleSound}
+              />
             </div>
           </div>
         </div>
@@ -171,7 +186,10 @@ export default function App() {
           <NavBtn label="Gráficos" active={tab === 'charts'} onClick={() => setTab('charts')} icon="📊" />
         </div>
         <button
-          onClick={() => setAdding(true)}
+          onClick={() => {
+            playClick()
+            setAdding(true)
+          }}
           className="absolute -top-6 left-1/2 grid h-14 w-14 -translate-x-1/2 place-items-center rounded-full bg-brand-500 text-3xl font-light text-black shadow-lg shadow-brand-500/20 active:scale-95"
         >
           +

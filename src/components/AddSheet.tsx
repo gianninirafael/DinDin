@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react'
 import type { TxKind, Transaction, Category } from '../types'
 import { useStore } from '../store'
 import { formatAmount, formatDMY, isToday } from '../lib/format'
+import { playClick, playConfirm } from '../lib/sound'
 import CategoryEditor from './CategoryEditor'
 import ReorderSheet from './ReorderSheet'
 
@@ -56,6 +57,7 @@ export default function AddSheet({
   const amount = parseFloat(raw.replace(/\./g, '').replace(',', '.')) || 0
 
   function press(key: string) {
+    playClick()
     setRaw((prev) => {
       if (key === 'back') return prev.length <= 1 ? '0' : prev.slice(0, -1)
       if (key === ',') return prev.includes(',') ? prev : prev + ','
@@ -72,6 +74,7 @@ export default function AddSheet({
     } else {
       await addTransaction({ kind, amount, categoryId, note: note.trim() || undefined, date })
     }
+    playConfirm()
     onClose()
   }
 
@@ -89,6 +92,7 @@ export default function AddSheet({
   }
 
   function tapCategory(c: Category) {
+    playClick()
     if (manageMode) {
       setEditingCat(c)
       setCatEditorOpen(true)
@@ -102,7 +106,7 @@ export default function AddSheet({
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-ink text-white">
       {/* Header */}
-      <div className="flex items-center justify-between px-5 pt-4 pb-3">
+      <div className="flex items-center justify-between px-5 pt-3 pb-2">
         <button onClick={onClose} className="text-base text-neutral-300">
           Cancelar
         </button>
@@ -124,7 +128,7 @@ export default function AddSheet({
       </div>
 
       {/* Kind tabs */}
-      <div className="mx-4 mb-4 flex rounded-full bg-neutral-800/70 p-1 text-sm font-medium">
+      <div className="mx-4 mb-3 flex rounded-full bg-neutral-800/70 p-1 text-sm font-medium">
         {KIND_TABS.map((t) => (
           <button
             key={t.key}
@@ -157,17 +161,17 @@ export default function AddSheet({
 
       {/* Category grid */}
       <div className="min-h-0 flex-1 overflow-y-auto px-4">
-        <div className="grid grid-cols-4 gap-x-3 gap-y-5 pb-2">
+        <div className="grid grid-cols-4 gap-x-2 gap-y-3 pb-2">
           {visibleCats.map((c) => {
             const active = c.id === categoryId && !manageMode
             return (
               <button
                 key={c.id}
                 onClick={() => tapCategory(c)}
-                className="relative flex flex-col items-center gap-2"
+                className="relative flex flex-col items-center gap-1.5"
               >
                 <span
-                  className="grid h-16 w-16 place-items-center rounded-full text-2xl transition"
+                  className="grid h-[52px] w-[52px] place-items-center rounded-full text-xl transition"
                   style={{
                     background: active ? c.color : 'rgba(255,255,255,0.06)',
                     boxShadow: active ? `0 0 0 3px ${c.color}55` : 'none',
@@ -176,11 +180,11 @@ export default function AddSheet({
                   {c.icon}
                 </span>
                 {manageMode && (
-                  <span className="absolute right-3 top-0 grid h-6 w-6 place-items-center rounded-full bg-brand-500 text-xs text-black">
+                  <span className="absolute right-1.5 top-0 grid h-5 w-5 place-items-center rounded-full bg-brand-500 text-[10px] text-black">
                     ✏️
                   </span>
                 )}
-                <span className="line-clamp-1 text-center text-xs text-neutral-300">
+                <span className="line-clamp-1 text-center text-[11px] text-neutral-300">
                   {c.label}
                 </span>
               </button>
@@ -188,19 +192,19 @@ export default function AddSheet({
           })}
 
           {/* Add-category tile */}
-          <button onClick={openNewCategory} className="flex flex-col items-center gap-2">
-            <span className="grid h-16 w-16 place-items-center rounded-full border border-dashed border-neutral-600 text-2xl text-neutral-400">
+          <button onClick={openNewCategory} className="flex flex-col items-center gap-1.5">
+            <span className="grid h-[52px] w-[52px] place-items-center rounded-full border border-dashed border-neutral-600 text-xl text-neutral-400">
               +
             </span>
-            <span className="line-clamp-1 text-center text-xs text-neutral-500">Nova</span>
+            <span className="line-clamp-1 text-center text-[11px] text-neutral-500">Nova</span>
           </button>
         </div>
       </div>
 
       {/* Amount */}
-      <div className="px-6 pb-2 pt-3 text-right">
+      <div className="px-6 pb-1 pt-2 text-right">
         <span
-          className={`tnum text-6xl font-extrabold tracking-tight ${
+          className={`tnum text-[2.75rem] font-extrabold leading-none tracking-tight ${
             amount > 0 ? 'text-white' : 'text-neutral-600'
           }`}
         >
@@ -209,23 +213,23 @@ export default function AddSheet({
       </div>
 
       {/* Note */}
-      <div className="px-4 pb-3">
+      <div className="px-4 pb-2 pt-2">
         <input
           value={note}
           onChange={(e) => setNote(e.target.value)}
           placeholder="Nota :  Insira uma nota…"
-          className="w-full rounded-2xl bg-neutral-800/70 px-4 py-3.5 text-base text-white placeholder:text-neutral-500 outline-none"
+          className="w-full rounded-2xl bg-neutral-800/70 px-4 py-3 text-base text-white placeholder:text-neutral-500 outline-none"
         />
       </div>
 
       {/* Keypad */}
-      <div className="grid grid-cols-4 gap-2 px-3 pb-6">
+      <div className="grid grid-cols-4 gap-2 px-3 pb-[calc(1rem+env(safe-area-inset-bottom))]">
         <div className="col-span-3 grid grid-cols-3 gap-2">
           {KEYS.map((k) => (
             <button
               key={k}
               onClick={() => press(k)}
-              className="rounded-2xl bg-neutral-800/70 py-4 text-2xl font-medium active:bg-neutral-700"
+              className="rounded-2xl bg-neutral-800/70 py-3 text-xl font-medium active:bg-neutral-700"
             >
               {k === 'back' ? '⌫' : k}
             </button>
