@@ -13,4 +13,4 @@ export function ns(key: string): string {
 }
 
 /** Human label for the current build (shown subtly in v2). */
-export const APP_VARIANT = NS === 'dindin' ? '' : NS.replace('dindin_', 'v')
+export const APP_VARIANT = NS === 'dindin' ? '' : NS.replace('dindin_', '')

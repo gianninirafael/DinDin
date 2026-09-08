@@ -19,7 +19,7 @@ export default function Charts() {
   const total = data.reduce((s, d) => s + d.value, 0)
 
   return (
-    <div className="mx-auto max-w-lg px-5 pb-28 pt-8">
+    <div className="mx-auto max-w-lg px-5 pb-28 pt-[4.5rem]">
       <h1 className="text-2xl font-extrabold tracking-tight text-white">Gráficos</h1>
       <p className="mt-1 text-sm text-neutral-500">Despesas de {monthShort(activeMonth)}.</p>
 

@@ -7,6 +7,7 @@ export interface Category {
   color: string // hex used for the icon bubble
   kind: TxKind | 'both'
   order?: number // sort position within the picker
+  monthlyBudget?: number // recurring monthly allocation (zero-based), BRL; undefined = unbudgeted
 }
 
 export interface Transaction {

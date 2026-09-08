@@ -16,6 +16,7 @@ import { monthKeyOf, todayISO } from './lib/format'
 import { ns } from './lib/ns'
 
 const LAST_DATE_KEY = ns('lastDate')
+const AVAILABLE_KEY = ns('availableToBudget')
 
 function readLastDate(): string {
   try {
@@ -25,12 +26,22 @@ function readLastDate(): string {
   }
 }
 
+function readAvailable(): number {
+  try {
+    return Number(localStorage.getItem(AVAILABLE_KEY)) || 0
+  } catch {
+    return 0
+  }
+}
+
 interface State {
   transactions: Transaction[]
   categories: Category[]
   loaded: boolean
   activeMonth: string // yyyy-mm
   lastDate: string // remembered date for the next new entry
+  availableToBudget: number // manual "disponível para orçar" pool (zero-based)
+  setAvailableToBudget: (value: number) => void
   load: () => Promise<void>
   addTransaction: (tx: Omit<Transaction, 'id' | 'createdAt'>) => Promise<void>
   updateTransaction: (tx: Transaction) => Promise<void>
@@ -49,6 +60,16 @@ export const useStore = create<State>((set, get) => ({
   loaded: false,
   activeMonth: monthKeyOf(todayISO()),
   lastDate: readLastDate(),
+  availableToBudget: readAvailable(),
+
+  setAvailableToBudget: (value) => {
+    try {
+      localStorage.setItem(AVAILABLE_KEY, String(value))
+    } catch {
+      // ignore storage failures
+    }
+    set({ availableToBudget: value })
+  },
 
   load: async () => {
     const [transactions, categories] = await Promise.all([
@@ -196,6 +217,21 @@ export function monthTotals(txs: Transaction[]) {
     else if (t.kind === 'income') income += t.amount
   }
   return { expense, income, balance: income - expense }
+}
+
+/** Total expense spent per category id within the given month. */
+export function monthSpendByCategory(txs: Transaction[], monthKey: string): Record<string, number> {
+  const out: Record<string, number> = {}
+  for (const t of txs) {
+    if (t.kind !== 'expense' || !t.date.startsWith(monthKey)) continue
+    out[t.categoryId] = (out[t.categoryId] ?? 0) + t.amount
+  }
+  return out
+}
+
+/** Sum of all category monthly budgets (the total already allocated). */
+export function totalBudgeted(cats: Category[]): number {
+  return cats.reduce((s, c) => s + (c.monthlyBudget ?? 0), 0)
 }
 
 export function availableMonths(txs: Transaction[]): string[] {
