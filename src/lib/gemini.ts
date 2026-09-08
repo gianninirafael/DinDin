@@ -5,9 +5,9 @@ import type { TxKind } from '../types'
 // owner records audio — the audio (and their API key) go to Google. Opt-in.
 
 const KEY_STORAGE = 'dindin.geminiKey'
-const MODEL = 'gemini-2.5-flash'
-const ENDPOINT = (model: string, key: string) =>
-  `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`
+const MODEL = 'gemini-flash-latest'
+const ENDPOINT = (model: string) =>
+  `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
 
 export function getApiKey(): string {
   try {
@@ -108,9 +108,9 @@ export async function transcribeAudio(
 
   let res: Response
   try {
-    res = await fetch(ENDPOINT(MODEL, key), {
+    res = await fetch(ENDPOINT(MODEL), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-goog-api-key': key },
       body: JSON.stringify(body),
     })
   } catch {
