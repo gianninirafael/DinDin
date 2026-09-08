@@ -4,11 +4,14 @@ import type { Transaction, Category } from './types'
 import {
   loadTransactions,
   putTransaction,
+  putManyTransactions,
   deleteTransaction,
   loadCategories,
   putCategory,
+  putManyCategories,
   deleteCategoryFromDB,
 } from './lib/db'
+import type { BackupData } from './lib/backup'
 import { monthKeyOf, todayISO } from './lib/format'
 
 const LAST_DATE_KEY = 'dindin.lastDate'
@@ -34,6 +37,7 @@ interface State {
   saveCategory: (cat: Category) => Promise<void>
   removeCategory: (id: string) => Promise<void>
   moveCategory: (kind: Category['kind'], id: string, dir: -1 | 1) => Promise<void>
+  importBackup: (data: BackupData) => Promise<{ transactions: number; categories: number }>
   setActiveMonth: (month: string) => void
 }
 
@@ -109,6 +113,35 @@ export const useStore = create<State>((set, get) => ({
       [updatedB.id, updatedB],
     ])
     set({ categories: sortCats(all.map((c) => map.get(c.id) ?? c)) })
+  },
+
+  // Merge a backup by id (upsert): existing ids are overwritten, new ones added.
+  // Safe to run on a device that already has data — never duplicates.
+  importBackup: async (data) => {
+    await Promise.all([
+      putManyCategories(data.categories),
+      putManyTransactions(data.transactions),
+    ])
+
+    const catMap = new Map(get().categories.map((c) => [c.id, c]))
+    for (const c of data.categories) catMap.set(c.id, c)
+    const txMap = new Map(get().transactions.map((t) => [t.id, t]))
+    for (const t of data.transactions) txMap.set(t.id, t)
+
+    const next: Partial<State> = {
+      categories: sortCats([...catMap.values()]),
+      transactions: [...txMap.values()],
+    }
+    if (data.lastDate) {
+      try {
+        localStorage.setItem(LAST_DATE_KEY, data.lastDate)
+      } catch {
+        // ignore storage failures
+      }
+      next.lastDate = data.lastDate
+    }
+    set(next)
+    return { transactions: data.transactions.length, categories: data.categories.length }
   },
 
   setActiveMonth: (activeMonth) => set({ activeMonth }),

@@ -100,6 +100,12 @@ src/
   the same sheet handles create, update, and delete.
 - Keep everything client-side. Do not add network requests, analytics, or any
   code that transmits the owner's financial data.
+- **Backup/restore & export** live in the top-left "Dados" menu (`App.tsx`):
+  CSV export (`lib/export.ts`), full JSON backup, and JSON restore
+  (`lib/backup.ts`). Restore is an **upsert by id** via `importBackup` — safe
+  and idempotent (re-importing never duplicates). `downloadFile` adds a UTF-8
+  BOM for CSV only, never for JSON, and `parseBackup` strips a stray BOM.
+  The JSON backup is the owner's safety net since data is device-local.
 
 ## Commands
 
@@ -116,7 +122,6 @@ Always run `npm run build` before committing — it typechecks the whole project
 - Transfers are selectable but treated like a plain entry (no account model yet).
 - Reports screen, search, calendar view, budgets/goals.
 - **Voice entry** (dictate "nome - valor - data" lines to add many at once).
-- **Export to Google Sheets / CSV.**
-- Optional cloud sync.
+- Optional cloud sync (data is device-local; JSON backup is the manual bridge).
 - Installable PWA manifest + service worker.
 ```

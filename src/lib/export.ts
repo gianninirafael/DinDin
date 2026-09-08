@@ -38,8 +38,10 @@ export function buildCSV(txs: Transaction[], catMap: Record<string, Category>): 
 
 /** Triggers a browser download of the given text as a file. */
 export function downloadFile(filename: string, content: string, mime = 'text/csv;charset=utf-8') {
-  // Prepend a UTF-8 BOM so Excel opens accented pt-BR text correctly.
-  const blob = new Blob(['﻿' + content], { type: mime })
+  // A UTF-8 BOM helps Excel open accented pt-BR text, but must NOT go into
+  // JSON (it would break JSON.parse on restore). Add it for CSV only.
+  const body = mime.includes('csv') ? '﻿' + content : content
+  const blob = new Blob([body], { type: mime })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url

@@ -45,6 +45,12 @@ export async function putTransaction(tx: Transaction): Promise<void> {
   await db.put('transactions', tx)
 }
 
+export async function putManyTransactions(txs: Transaction[]): Promise<void> {
+  const db = await getDB()
+  const tx = db.transaction('transactions', 'readwrite')
+  await Promise.all([...txs.map((t) => tx.store.put(t)), tx.done])
+}
+
 export async function deleteTransaction(id: string): Promise<void> {
   const db = await getDB()
   await db.delete('transactions', id)
@@ -69,6 +75,12 @@ export async function loadCategories(): Promise<Category[]> {
 export async function putCategory(cat: Category): Promise<void> {
   const db = await getDB()
   await db.put('categories', cat)
+}
+
+export async function putManyCategories(cats: Category[]): Promise<void> {
+  const db = await getDB()
+  const tx = db.transaction('categories', 'readwrite')
+  await Promise.all([...cats.map((c) => tx.store.put(c)), tx.done])
 }
 
 export async function deleteCategoryFromDB(id: string): Promise<void> {
