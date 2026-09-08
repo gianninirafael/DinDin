@@ -1,5 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
-import type { Transaction, Category, Caixinha, Pendencia } from '../types'
+import type { Transaction, Category, Caixinha, Pendencia, Habit, HabitEntry } from '../types'
 import { DEFAULT_CATEGORIES } from '../data/categories'
 import { DB_NAME } from './ns'
 
@@ -21,13 +21,21 @@ interface DinDinDB extends DBSchema {
     key: string
     value: Pendencia
   }
+  habits: {
+    key: string
+    value: Habit
+  }
+  habitEntries: {
+    key: string
+    value: HabitEntry
+  }
 }
 
 let dbPromise: Promise<IDBPDatabase<DinDinDB>> | null = null
 
 function getDB() {
   if (!dbPromise) {
-    dbPromise = openDB<DinDinDB>(DB_NAME, 3, {
+    dbPromise = openDB<DinDinDB>(DB_NAME, 4, {
       upgrade(db, oldVersion) {
         if (oldVersion < 1) {
           const store = db.createObjectStore('transactions', { keyPath: 'id' })
@@ -39,6 +47,10 @@ function getDB() {
         if (oldVersion < 3) {
           db.createObjectStore('caixinhas', { keyPath: 'id' })
           db.createObjectStore('pendencias', { keyPath: 'id' })
+        }
+        if (oldVersion < 4) {
+          db.createObjectStore('habits', { keyPath: 'id' })
+          db.createObjectStore('habitEntries', { keyPath: 'id' })
         }
       },
     })
@@ -133,4 +145,31 @@ export async function putPendencia(p: Pendencia): Promise<void> {
 export async function deletePendenciaFromDB(id: string): Promise<void> {
   const db = await getDB()
   await db.delete('pendencias', id)
+}
+
+// ---- habits (Fase 5) ----
+
+export async function loadHabits(): Promise<Habit[]> {
+  const db = await getDB()
+  return db.getAll('habits')
+}
+
+export async function putHabit(h: Habit): Promise<void> {
+  const db = await getDB()
+  await db.put('habits', h)
+}
+
+export async function deleteHabitFromDB(id: string): Promise<void> {
+  const db = await getDB()
+  await db.delete('habits', id)
+}
+
+export async function loadHabitEntries(): Promise<HabitEntry[]> {
+  const db = await getDB()
+  return db.getAll('habitEntries')
+}
+
+export async function putHabitEntry(e: HabitEntry): Promise<void> {
+  const db = await getDB()
+  await db.put('habitEntries', e)
 }

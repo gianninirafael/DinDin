@@ -166,6 +166,14 @@ Two live builds from this one repo, both on GitHub Pages (same origin):
   - *Carteira semanal física*: `weeklyWallet` (localStorage via ns). When set it
     is the source of truth on Hoje — day teto = weekly/7, week = weekly, month ≈
     weekly·days/7; overspend offers a "repor" `estouro` pendência.
+- **Fase 5 — Hábitos (experimental, self-contained):** `Habit` + `HabitEntry`
+  (DB v4, stores `habits`/`habitEntries`). Kept OUT of the main UI — reached via
+  a "Hábitos (beta)" row in the top-left "Dados" menu. `Habits.tsx`: create a
+  habit (name, emoji, unit price, optional resistência caixinha); "+1 comprei" /
+  "Compra composta" log `buy` entries; per-habit accumulated spend, unit count,
+  annual projection (lifetime daily rate ×365) and clean-days streak. "Resisti"
+  logs a `resist` entry and opens a `resistencia` pendência to the linked
+  caixinha. Habit data does NOT touch transactions or the budget math.
 
 ## Roadmap / not built yet
 

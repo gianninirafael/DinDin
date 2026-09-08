@@ -39,6 +39,28 @@ export interface Caixinha {
   order?: number
 }
 
+// ---- Hábitos (Fase 5, experimental, self-contained) ----
+
+export interface Habit {
+  id: string
+  name: string
+  icon: string
+  color: string
+  unitPrice: number // reference price per unit (BRL)
+  caixinhaId?: string // resistência target
+  order?: number
+}
+
+export interface HabitEntry {
+  id: string
+  habitId: string
+  units: number
+  amount: number // units * unitPrice at the time
+  kind: 'buy' | 'resist'
+  date: string // ISO yyyy-mm-dd
+  createdAt: number
+}
+
 export type PendenciaOrigin = 'reembolso' | 'sobra' | 'resistencia' | 'estouro' | 'manual'
 
 export interface Pendencia {

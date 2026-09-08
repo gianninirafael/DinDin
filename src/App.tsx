@@ -11,6 +11,7 @@ import Charts from './components/Charts'
 import Budget from './components/Budget'
 import Today from './components/Today'
 import Caixinhas from './components/Caixinhas'
+import Habits from './components/Habits'
 import AddSheet from './components/AddSheet'
 import VoiceSheet from './components/VoiceSheet'
 
@@ -28,6 +29,7 @@ export default function App() {
   const [dataOpen, setDataOpen] = useState(false)
   const [voiceOpen, setVoiceOpen] = useState(false)
   const [caixinhasOpen, setCaixinhasOpen] = useState(false)
+  const [habitsOpen, setHabitsOpen] = useState(false)
   const [soundOn, setSoundOnState] = useState(isSoundOn())
   const restoreInputRef = useRef<HTMLInputElement>(null)
 
@@ -161,6 +163,12 @@ export default function App() {
                 subtitle="Clique suave ao tocar nos botões"
                 onClick={toggleSound}
               />
+              <DataAction
+                icon="🚬"
+                title="Hábitos (beta)"
+                subtitle="Rastreio de vícios — separado do orçamento"
+                onClick={() => { setDataOpen(false); setHabitsOpen(true) }}
+              />
             </div>
           </div>
         </div>
@@ -234,6 +242,7 @@ export default function App() {
       {sheetOpen && <AddSheet editing={editingTx} onClose={closeSheet} />}
       {voiceOpen && <VoiceSheet onClose={() => setVoiceOpen(false)} />}
       {caixinhasOpen && <Caixinhas onClose={() => setCaixinhasOpen(false)} />}
+      {habitsOpen && <Habits onClose={() => setHabitsOpen(false)} />}
     </div>
   )
 }

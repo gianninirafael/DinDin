@@ -16,8 +16,13 @@ import {
   loadPendencias,
   putPendencia,
   deletePendenciaFromDB,
+  loadHabits,
+  putHabit,
+  deleteHabitFromDB,
+  loadHabitEntries,
+  putHabitEntry,
 } from './lib/db'
-import type { Caixinha, Pendencia } from './types'
+import type { Caixinha, Pendencia, Habit, HabitEntry } from './types'
 import type { BackupData } from './lib/backup'
 import { monthKeyOf, todayISO } from './lib/format'
 import { ns } from './lib/ns'
@@ -55,6 +60,8 @@ interface State {
   categories: Category[]
   caixinhas: Caixinha[]
   pendencias: Pendencia[]
+  habits: Habit[]
+  habitEntries: HabitEntry[]
   loaded: boolean
   activeMonth: string // yyyy-mm
   lastDate: string // remembered date for the next new entry
@@ -79,6 +86,11 @@ interface State {
   createPendencia: (p: Omit<Pendencia, 'id' | 'createdAt' | 'status'>) => Promise<void>
   confirmPendencia: (id: string) => Promise<void>
   dismissPendencia: (id: string) => Promise<void>
+  // hábitos (Fase 5)
+  saveHabit: (h: Habit) => Promise<void>
+  removeHabit: (id: string) => Promise<void>
+  logHabitBuy: (items: { habitId: string; units: number }[], date: string) => Promise<void>
+  resistHabit: (habitId: string, units: number, date: string) => Promise<void>
 }
 
 export const useStore = create<State>((set, get) => ({
@@ -86,6 +98,8 @@ export const useStore = create<State>((set, get) => ({
   categories: [],
   caixinhas: [],
   pendencias: [],
+  habits: [],
+  habitEntries: [],
   loaded: false,
   activeMonth: monthKeyOf(todayISO()),
   lastDate: readLastDate(),
@@ -111,17 +125,22 @@ export const useStore = create<State>((set, get) => ({
   },
 
   load: async () => {
-    const [transactions, categories, caixinhas, pendencias] = await Promise.all([
-      loadTransactions(),
-      loadCategories(),
-      loadCaixinhas(),
-      loadPendencias(),
-    ])
+    const [transactions, categories, caixinhas, pendencias, habits, habitEntries] =
+      await Promise.all([
+        loadTransactions(),
+        loadCategories(),
+        loadCaixinhas(),
+        loadPendencias(),
+        loadHabits(),
+        loadHabitEntries(),
+      ])
     set({
       transactions,
       categories: sortCats(categories),
       caixinhas: sortCaixinhas(caixinhas),
       pendencias,
+      habits: [...habits].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
+      habitEntries,
       loaded: true,
     })
   },
@@ -283,6 +302,64 @@ export const useStore = create<State>((set, get) => ({
   dismissPendencia: async (id) => {
     await deletePendenciaFromDB(id)
     set({ pendencias: get().pendencias.filter((x) => x.id !== id) })
+  },
+
+  saveHabit: async (h) => {
+    await putHabit(h)
+    const rest = get().habits.filter((x) => x.id !== h.id)
+    set({ habits: [...rest, h].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)) })
+  },
+
+  removeHabit: async (id) => {
+    await deleteHabitFromDB(id)
+    set({ habits: get().habits.filter((h) => h.id !== id) })
+  },
+
+  logHabitBuy: async (items, date) => {
+    const habits = get().habits
+    const now = Date.now()
+    const entries: HabitEntry[] = []
+    items.forEach((it, i) => {
+      if (it.units <= 0) return
+      const h = habits.find((x) => x.id === it.habitId)
+      if (!h) return
+      entries.push({
+        id: crypto.randomUUID(),
+        habitId: it.habitId,
+        units: it.units,
+        amount: Math.round(it.units * h.unitPrice * 100) / 100,
+        kind: 'buy',
+        date,
+        createdAt: now + i,
+      })
+    })
+    await Promise.all(entries.map(putHabitEntry))
+    set({ habitEntries: [...get().habitEntries, ...entries] })
+  },
+
+  // "Resisti": logs the resisted units and opens a resistência pendência to
+  // actually move that money into a caixinha (manual confirmation).
+  resistHabit: async (habitId, units, date) => {
+    const h = get().habits.find((x) => x.id === habitId)
+    if (!h || units <= 0) return
+    const amount = Math.round(units * h.unitPrice * 100) / 100
+    const entry: HabitEntry = {
+      id: crypto.randomUUID(),
+      habitId,
+      units,
+      amount,
+      kind: 'resist',
+      date,
+      createdAt: Date.now(),
+    }
+    await putHabitEntry(entry)
+    set({ habitEntries: [...get().habitEntries, entry] })
+    await get().createPendencia({
+      origin: 'resistencia',
+      caixinhaId: h.caixinhaId,
+      amount,
+      note: `Resisti: ${h.name}`,
+    })
   },
 
   setActiveMonth: (activeMonth) => set({ activeMonth }),
