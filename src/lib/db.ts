@@ -1,5 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
-import type { Transaction, Category } from '../types'
+import type { Transaction, Category, Caixinha, Pendencia } from '../types'
 import { DEFAULT_CATEGORIES } from '../data/categories'
 import { DB_NAME } from './ns'
 
@@ -13,13 +13,21 @@ interface DinDinDB extends DBSchema {
     key: string
     value: Category
   }
+  caixinhas: {
+    key: string
+    value: Caixinha
+  }
+  pendencias: {
+    key: string
+    value: Pendencia
+  }
 }
 
 let dbPromise: Promise<IDBPDatabase<DinDinDB>> | null = null
 
 function getDB() {
   if (!dbPromise) {
-    dbPromise = openDB<DinDinDB>(DB_NAME, 2, {
+    dbPromise = openDB<DinDinDB>(DB_NAME, 3, {
       upgrade(db, oldVersion) {
         if (oldVersion < 1) {
           const store = db.createObjectStore('transactions', { keyPath: 'id' })
@@ -27,6 +35,10 @@ function getDB() {
         }
         if (oldVersion < 2) {
           db.createObjectStore('categories', { keyPath: 'id' })
+        }
+        if (oldVersion < 3) {
+          db.createObjectStore('caixinhas', { keyPath: 'id' })
+          db.createObjectStore('pendencias', { keyPath: 'id' })
         }
       },
     })
@@ -87,4 +99,38 @@ export async function putManyCategories(cats: Category[]): Promise<void> {
 export async function deleteCategoryFromDB(id: string): Promise<void> {
   const db = await getDB()
   await db.delete('categories', id)
+}
+
+// ---- caixinhas ----
+
+export async function loadCaixinhas(): Promise<Caixinha[]> {
+  const db = await getDB()
+  return db.getAll('caixinhas')
+}
+
+export async function putCaixinha(c: Caixinha): Promise<void> {
+  const db = await getDB()
+  await db.put('caixinhas', c)
+}
+
+export async function deleteCaixinhaFromDB(id: string): Promise<void> {
+  const db = await getDB()
+  await db.delete('caixinhas', id)
+}
+
+// ---- pendencias ----
+
+export async function loadPendencias(): Promise<Pendencia[]> {
+  const db = await getDB()
+  return db.getAll('pendencias')
+}
+
+export async function putPendencia(p: Pendencia): Promise<void> {
+  const db = await getDB()
+  await db.put('pendencias', p)
+}
+
+export async function deletePendenciaFromDB(id: string): Promise<void> {
+  const db = await getDB()
+  await db.delete('pendencias', id)
 }

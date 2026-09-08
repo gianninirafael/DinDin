@@ -10,7 +10,14 @@ import {
   putCategory,
   putManyCategories,
   deleteCategoryFromDB,
+  loadCaixinhas,
+  putCaixinha,
+  deleteCaixinhaFromDB,
+  loadPendencias,
+  putPendencia,
+  deletePendenciaFromDB,
 } from './lib/db'
+import type { Caixinha, Pendencia } from './types'
 import type { BackupData } from './lib/backup'
 import { monthKeyOf, todayISO } from './lib/format'
 import { ns } from './lib/ns'
@@ -37,6 +44,8 @@ function readAvailable(): number {
 interface State {
   transactions: Transaction[]
   categories: Category[]
+  caixinhas: Caixinha[]
+  pendencias: Pendencia[]
   loaded: boolean
   activeMonth: string // yyyy-mm
   lastDate: string // remembered date for the next new entry
@@ -52,11 +61,20 @@ interface State {
   moveCategory: (kind: Category['kind'], id: string, dir: -1 | 1) => Promise<void>
   importBackup: (data: BackupData) => Promise<{ transactions: number; categories: number }>
   setActiveMonth: (month: string) => void
+  // caixinhas + pendencias (Fase 3)
+  saveCaixinha: (c: Caixinha) => Promise<void>
+  removeCaixinha: (id: string) => Promise<void>
+  depositToCaixinha: (id: string, amount: number) => Promise<void>
+  createPendencia: (p: Omit<Pendencia, 'id' | 'createdAt' | 'status'>) => Promise<void>
+  confirmPendencia: (id: string) => Promise<void>
+  dismissPendencia: (id: string) => Promise<void>
 }
 
 export const useStore = create<State>((set, get) => ({
   transactions: [],
   categories: [],
+  caixinhas: [],
+  pendencias: [],
   loaded: false,
   activeMonth: monthKeyOf(todayISO()),
   lastDate: readLastDate(),
@@ -72,11 +90,19 @@ export const useStore = create<State>((set, get) => ({
   },
 
   load: async () => {
-    const [transactions, categories] = await Promise.all([
+    const [transactions, categories, caixinhas, pendencias] = await Promise.all([
       loadTransactions(),
       loadCategories(),
+      loadCaixinhas(),
+      loadPendencias(),
     ])
-    set({ transactions, categories: sortCats(categories), loaded: true })
+    set({
+      transactions,
+      categories: sortCats(categories),
+      caixinhas: sortCaixinhas(caixinhas),
+      pendencias,
+      loaded: true,
+    })
   },
 
   addTransaction: async (input) => {
@@ -186,11 +212,54 @@ export const useStore = create<State>((set, get) => ({
     return { transactions: data.transactions.length, categories: data.categories.length }
   },
 
+  saveCaixinha: async (c) => {
+    await putCaixinha(c)
+    const rest = get().caixinhas.filter((x) => x.id !== c.id)
+    set({ caixinhas: sortCaixinhas([...rest, c]) })
+  },
+
+  removeCaixinha: async (id) => {
+    await deleteCaixinhaFromDB(id)
+    set({ caixinhas: get().caixinhas.filter((c) => c.id !== id) })
+  },
+
+  depositToCaixinha: async (id, amount) => {
+    const c = get().caixinhas.find((x) => x.id === id)
+    if (!c) return
+    const updated = { ...c, balance: Math.round((c.balance + amount) * 100) / 100 }
+    await putCaixinha(updated)
+    set({ caixinhas: get().caixinhas.map((x) => (x.id === id ? updated : x)) })
+  },
+
+  createPendencia: async (input) => {
+    const p: Pendencia = { ...input, id: crypto.randomUUID(), status: 'pendente', createdAt: Date.now() }
+    await putPendencia(p)
+    set({ pendencias: [...get().pendencias, p] })
+  },
+
+  // Confirming = the real transfer happened: value lands in the caixinha.
+  confirmPendencia: async (id) => {
+    const p = get().pendencias.find((x) => x.id === id)
+    if (!p) return
+    if (p.caixinhaId) await get().depositToCaixinha(p.caixinhaId, p.amount)
+    await deletePendenciaFromDB(id)
+    set({ pendencias: get().pendencias.filter((x) => x.id !== id) })
+  },
+
+  dismissPendencia: async (id) => {
+    await deletePendenciaFromDB(id)
+    set({ pendencias: get().pendencias.filter((x) => x.id !== id) })
+  },
+
   setActiveMonth: (activeMonth) => set({ activeMonth }),
 }))
 
 function sortCats(cats: Category[]): Category[] {
   return [...cats].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+}
+
+function sortCaixinhas(list: Caixinha[]): Caixinha[] {
+  return [...list].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
 }
 
 // ---- selectors (derived helpers) ----

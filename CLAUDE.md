@@ -148,6 +148,13 @@ Two live builds from this one repo, both on GitHub Pages (same origin):
   month's days with Fri/Sat weighted `WEEKEND_WEIGHT` (1.5). `Today.tsx` (Hoje
   tab) shows "posso gastar" for dia/semana/mês = teto − gasto (cap categories),
   day resets daily, week/month keep counting. Cap toggle set in the Budget sheet.
+- **Fase 3 — caixinha mechanism:** `Caixinha` + `Pendencia` entities (DB v3,
+  stores `caixinhas`/`pendencias`). `Caixinhas.tsx` (opened from a Home card):
+  create/edit (acumulativa / alvo_fixo / meta_com_prazo), "Guardar agora"
+  (direct `depositToCaixinha`) or "Guardar depois" (`createPendencia`).
+  `PendingAlert.tsx` is the persistent home banner for pending pendências;
+  `confirmPendencia` moves the value into the caixinha, `dismissPendencia`
+  drops it. Reused later for reembolso / sobra / resistência (Fase 4-5).
 
 ## Roadmap / not built yet
 

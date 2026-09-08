@@ -1,7 +1,8 @@
 import { useMemo } from 'react'
 import { useStore, useCategoryMap, monthTransactions, monthTotals } from '../store'
-import { formatAmount, dayHeading, monthShort } from '../lib/format'
+import { formatAmount, formatMoney, dayHeading, monthShort } from '../lib/format'
 import type { Transaction } from '../types'
+import PendingAlert from './PendingAlert'
 
 function groupByDay(txs: Transaction[]) {
   const groups: { date: string; items: Transaction[]; expense: number; income: number }[] = []
@@ -18,9 +19,16 @@ function groupByDay(txs: Transaction[]) {
   return groups
 }
 
-export default function Home({ onSelect }: { onSelect: (tx: Transaction) => void }) {
-  const { transactions, activeMonth } = useStore()
+export default function Home({
+  onSelect,
+  onOpenCaixinhas,
+}: {
+  onSelect: (tx: Transaction) => void
+  onOpenCaixinhas: () => void
+}) {
+  const { transactions, activeMonth, caixinhas } = useStore()
   const catMap = useCategoryMap()
+  const totalSaved = useMemo(() => caixinhas.reduce((s, c) => s + c.balance, 0), [caixinhas])
 
   const monthTxs = useMemo(
     () => monthTransactions(transactions, activeMonth),
@@ -32,8 +40,12 @@ export default function Home({ onSelect }: { onSelect: (tx: Transaction) => void
 
   return (
     <div className="mx-auto max-w-lg pb-28">
+      <div className="px-5 pt-[4.5rem]">
+        <PendingAlert />
+      </div>
+
       {/* Hero: month balance */}
-      <div className="px-5 pt-8 pb-5">
+      <div className="px-5 pb-5">
         <p className="text-sm font-medium uppercase tracking-wide text-neutral-500">Saldo do mês</p>
         <div className="mt-1 flex items-end gap-2">
           <span
@@ -51,6 +63,21 @@ export default function Home({ onSelect }: { onSelect: (tx: Transaction) => void
           <MiniStat label="Despesas" value={totals.expense} tone="text-rose-400" prefix="−" />
           <MiniStat label="Receitas" value={totals.income} tone="text-emerald-400" prefix="+" />
         </div>
+
+        <button
+          onClick={onOpenCaixinhas}
+          className="mt-3 flex w-full items-center gap-3 rounded-card bg-ink-soft px-4 py-3 text-left active:bg-ink-muted"
+        >
+          <span className="text-xl">🐷</span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[15px] font-semibold text-white">Caixinhas</span>
+            <span className="block text-xs text-neutral-500">
+              {caixinhas.length === 0 ? 'Guarde sobra, metas, resistência' : `${caixinhas.length} caixinha${caixinhas.length > 1 ? 's' : ''}`}
+            </span>
+          </span>
+          <span className="tnum text-[15px] font-bold text-brand-400">{formatMoney(totalSaved)}</span>
+          <span className="text-neutral-400">›</span>
+        </button>
       </div>
 
       {/* Day groups */}

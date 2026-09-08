@@ -10,6 +10,7 @@ import Home from './components/Home'
 import Charts from './components/Charts'
 import Budget from './components/Budget'
 import Today from './components/Today'
+import Caixinhas from './components/Caixinhas'
 import AddSheet from './components/AddSheet'
 import VoiceSheet from './components/VoiceSheet'
 
@@ -26,6 +27,7 @@ export default function App() {
   const [monthOpen, setMonthOpen] = useState(false)
   const [dataOpen, setDataOpen] = useState(false)
   const [voiceOpen, setVoiceOpen] = useState(false)
+  const [caixinhasOpen, setCaixinhasOpen] = useState(false)
   const [soundOn, setSoundOnState] = useState(isSoundOn())
   const restoreInputRef = useRef<HTMLInputElement>(null)
 
@@ -89,7 +91,7 @@ export default function App() {
   return (
     <div className="min-h-full bg-ink">
       {tab === 'home' ? (
-        <Home onSelect={setEditingTx} />
+        <Home onSelect={setEditingTx} onOpenCaixinhas={() => setCaixinhasOpen(true)} />
       ) : tab === 'today' ? (
         <Today />
       ) : tab === 'budget' ? (
@@ -231,6 +233,7 @@ export default function App() {
 
       {sheetOpen && <AddSheet editing={editingTx} onClose={closeSheet} />}
       {voiceOpen && <VoiceSheet onClose={() => setVoiceOpen(false)} />}
+      {caixinhasOpen && <Caixinhas onClose={() => setCaixinhasOpen(false)} />}
     </div>
   )
 }
