@@ -14,7 +14,9 @@ const CUSTOM_SOUNDS: Record<SoundName, string | null> = {
   confirm: null,
 }
 
-const SETTING_KEY = 'dindin.sound'
+import { ns } from './ns'
+
+const SETTING_KEY = ns('sound')
 
 export function isSoundOn(): boolean {
   try {

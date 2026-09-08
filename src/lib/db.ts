@@ -1,6 +1,7 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
 import type { Transaction, Category } from '../types'
 import { DEFAULT_CATEGORIES } from '../data/categories'
+import { DB_NAME } from './ns'
 
 interface DinDinDB extends DBSchema {
   transactions: {
@@ -18,7 +19,7 @@ let dbPromise: Promise<IDBPDatabase<DinDinDB>> | null = null
 
 function getDB() {
   if (!dbPromise) {
-    dbPromise = openDB<DinDinDB>('dindin', 2, {
+    dbPromise = openDB<DinDinDB>(DB_NAME, 2, {
       upgrade(db, oldVersion) {
         if (oldVersion < 1) {
           const store = db.createObjectStore('transactions', { keyPath: 'id' })

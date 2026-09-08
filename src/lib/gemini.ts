@@ -1,10 +1,11 @@
 import type { TxKind } from '../types'
+import { ns } from './ns'
 
 // Voice entry uses Gemini to transcribe a spoken audio and structure it into
 // rows. This is the ONE place the app talks to the network, and only when the
 // owner records audio — the audio (and their API key) go to Google. Opt-in.
 
-const KEY_STORAGE = 'dindin.geminiKey'
+const KEY_STORAGE = ns('geminiKey')
 const MODEL = 'gemini-flash-latest'
 const ENDPOINT = (model: string) =>
   `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
