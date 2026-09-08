@@ -155,6 +155,17 @@ Two live builds from this one repo, both on GitHub Pages (same origin):
   `PendingAlert.tsx` is the persistent home banner for pending pendências;
   `confirmPendencia` moves the value into the caixinha, `dismissPendencia`
   drops it. Reused later for reembolso / sobra / resistência (Fase 4-5).
+- **Fase 4 — features on the mechanism:**
+  - *Reembolsável*: `Transaction.reimbursable/reimbursed`. AddSheet toggle (expense)
+    creates a `reembolso` pendência (`transactionId`). Confirming marks the tx
+    `reimbursed` (excluded from all spend math — `monthTotals`,
+    `monthSpendByCategory`, `spendInRange`) and adds the amount back to
+    `availableToBudget`. Home tags rows "a receber" / "reembolsado".
+  - *Sobra*: on Hoje, when the period has leftover, "Guardar sobra" → pick a
+    caixinha → creates a `sobra` pendência.
+  - *Carteira semanal física*: `weeklyWallet` (localStorage via ns). When set it
+    is the source of truth on Hoje — day teto = weekly/7, week = weekly, month ≈
+    weekly·days/7; overspend offers a "repor" `estouro` pendência.
 
 ## Roadmap / not built yet
 

@@ -26,7 +26,8 @@ export default function AddSheet({
   editing?: Transaction | null
   onClose: () => void
 }) {
-  const { addTransaction, updateTransaction, removeTransaction, categories, lastDate } = useStore()
+  const { addTransaction, updateTransaction, removeTransaction, createPendencia, categories, lastDate } =
+    useStore()
   const isEdit = !!editing
 
   const [kind, setKind] = useState<TxKind>(editing?.kind ?? 'expense')
@@ -34,6 +35,7 @@ export default function AddSheet({
   const [raw, setRaw] = useState(editing ? amountToRaw(editing.amount) : '0')
   const [note, setNote] = useState(editing?.note ?? '')
   const [date, setDate] = useState(editing?.date ?? lastDate)
+  const [reimbursable, setReimbursable] = useState(editing?.reimbursable ?? false)
 
   const [manageMode, setManageMode] = useState(false)
   const [catEditorOpen, setCatEditorOpen] = useState(false)
@@ -69,10 +71,25 @@ export default function AddSheet({
 
   async function handleSave() {
     if (amount <= 0 || !categoryId) return
+    const isReimb = kind === 'expense' && reimbursable
     if (isEdit && editing) {
-      await updateTransaction({ ...editing, kind, amount, categoryId, note: note.trim() || undefined, date })
+      await updateTransaction({
+        ...editing, kind, amount, categoryId, note: note.trim() || undefined, date,
+        reimbursable: isReimb || undefined,
+      })
     } else {
-      await addTransaction({ kind, amount, categoryId, note: note.trim() || undefined, date })
+      const id = await addTransaction({
+        kind, amount, categoryId, note: note.trim() || undefined, date,
+        reimbursable: isReimb || undefined,
+      })
+      if (isReimb) {
+        await createPendencia({
+          origin: 'reembolso',
+          transactionId: id,
+          amount,
+          note: note.trim() || categories.find((c) => c.id === categoryId)?.label,
+        })
+      }
     }
     playConfirm()
     onClose()
@@ -220,6 +237,21 @@ export default function AddSheet({
           placeholder="Nota :  Insira uma nota…"
           className="w-full rounded-2xl bg-neutral-800/70 px-4 py-3 text-base text-white placeholder:text-neutral-500 outline-none"
         />
+        {kind === 'expense' && (
+          <button
+            onClick={() => setReimbursable((v) => !v)}
+            className={`mt-2 flex w-full items-center justify-between rounded-2xl px-4 py-2.5 text-left ${
+              reimbursable ? 'bg-brand-500/15' : 'bg-neutral-800/70'
+            }`}
+          >
+            <span className={`text-sm font-medium ${reimbursable ? 'text-brand-400' : 'text-neutral-300'}`}>
+              ↩︎ Reembolsável
+            </span>
+            <span className={`relative h-5 w-9 rounded-full transition ${reimbursable ? 'bg-brand-500' : 'bg-ink-line'}`}>
+              <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${reimbursable ? 'left-[1.125rem]' : 'left-0.5'}`} />
+            </span>
+          </button>
+        )}
       </div>
 
       {/* Keypad */}

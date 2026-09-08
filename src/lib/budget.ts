@@ -93,7 +93,7 @@ export function spendInRange(
 ): number {
   let sum = 0
   for (const t of txs) {
-    if (t.kind !== 'expense') continue
+    if (t.kind !== 'expense' || t.reimbursed) continue
     if (t.date < start || t.date > end) continue
     if (!capCatIds.has(t.categoryId)) continue
     sum += t.amount

@@ -24,6 +24,15 @@ import { ns } from './lib/ns'
 
 const LAST_DATE_KEY = ns('lastDate')
 const AVAILABLE_KEY = ns('availableToBudget')
+const WEEKLY_KEY = ns('weeklyWallet')
+
+function readWeekly(): number {
+  try {
+    return Number(localStorage.getItem(WEEKLY_KEY)) || 0
+  } catch {
+    return 0
+  }
+}
 
 function readLastDate(): string {
   try {
@@ -51,8 +60,10 @@ interface State {
   lastDate: string // remembered date for the next new entry
   availableToBudget: number // manual "disponível para orçar" pool (zero-based)
   setAvailableToBudget: (value: number) => void
+  weeklyWallet: number // "carteira semanal física" amount; 0 = disabled
+  setWeeklyWallet: (value: number) => void
   load: () => Promise<void>
-  addTransaction: (tx: Omit<Transaction, 'id' | 'createdAt'>) => Promise<void>
+  addTransaction: (tx: Omit<Transaction, 'id' | 'createdAt'>) => Promise<string>
   updateTransaction: (tx: Transaction) => Promise<void>
   addTransactions: (inputs: Omit<Transaction, 'id' | 'createdAt'>[]) => Promise<number>
   removeTransaction: (id: string) => Promise<void>
@@ -79,6 +90,7 @@ export const useStore = create<State>((set, get) => ({
   activeMonth: monthKeyOf(todayISO()),
   lastDate: readLastDate(),
   availableToBudget: readAvailable(),
+  weeklyWallet: readWeekly(),
 
   setAvailableToBudget: (value) => {
     try {
@@ -87,6 +99,15 @@ export const useStore = create<State>((set, get) => ({
       // ignore storage failures
     }
     set({ availableToBudget: value })
+  },
+
+  setWeeklyWallet: (value) => {
+    try {
+      localStorage.setItem(WEEKLY_KEY, String(value))
+    } catch {
+      // ignore storage failures
+    }
+    set({ weeklyWallet: value })
   },
 
   load: async () => {
@@ -118,6 +139,7 @@ export const useStore = create<State>((set, get) => ({
       // ignore storage failures
     }
     set({ transactions: [...get().transactions, tx], lastDate: tx.date })
+    return tx.id
   },
 
   updateTransaction: async (tx) => {
@@ -237,11 +259,23 @@ export const useStore = create<State>((set, get) => ({
     set({ pendencias: [...get().pendencias, p] })
   },
 
-  // Confirming = the real transfer happened: value lands in the caixinha.
+  // Confirming = the real event happened. Behaviour depends on the origin:
+  // - reembolso: the money came back → the original expense stops counting as
+  //   spend (net) and the amount becomes available to budget again.
+  // - caixinha-linked (sobra/manual): the value lands in the caixinha.
+  // - estouro/others: just clears the reminder.
   confirmPendencia: async (id) => {
     const p = get().pendencias.find((x) => x.id === id)
     if (!p) return
-    if (p.caixinhaId) await get().depositToCaixinha(p.caixinhaId, p.amount)
+    if (p.origin === 'reembolso' && p.transactionId) {
+      const tx = get().transactions.find((t) => t.id === p.transactionId)
+      if (tx) await get().updateTransaction({ ...tx, reimbursed: true })
+      get().setAvailableToBudget(
+        Math.round((get().availableToBudget + p.amount) * 100) / 100,
+      )
+    } else if (p.caixinhaId) {
+      await get().depositToCaixinha(p.caixinhaId, p.amount)
+    }
     await deletePendenciaFromDB(id)
     set({ pendencias: get().pendencias.filter((x) => x.id !== id) })
   },
@@ -282,8 +316,9 @@ export function monthTotals(txs: Transaction[]) {
   let expense = 0
   let income = 0
   for (const t of txs) {
-    if (t.kind === 'expense') expense += t.amount
-    else if (t.kind === 'income') income += t.amount
+    if (t.kind === 'expense') {
+      if (!t.reimbursed) expense += t.amount // reimbursed = net zero
+    } else if (t.kind === 'income') income += t.amount
   }
   return { expense, income, balance: income - expense }
 }
@@ -292,7 +327,7 @@ export function monthTotals(txs: Transaction[]) {
 export function monthSpendByCategory(txs: Transaction[], monthKey: string): Record<string, number> {
   const out: Record<string, number> = {}
   for (const t of txs) {
-    if (t.kind !== 'expense' || !t.date.startsWith(monthKey)) continue
+    if (t.kind !== 'expense' || t.reimbursed || !t.date.startsWith(monthKey)) continue
     out[t.categoryId] = (out[t.categoryId] ?? 0) + t.amount
   }
   return out

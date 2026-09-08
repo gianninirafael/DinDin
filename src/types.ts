@@ -19,6 +19,8 @@ export interface Transaction {
   note?: string
   date: string // ISO yyyy-mm-dd
   createdAt: number
+  reimbursable?: boolean // expense the owner expects to be paid back
+  reimbursed?: boolean // reimbursement received → excluded from net spend
 }
 
 // ---- Caixinha mechanism (Fase 3) ----
@@ -42,6 +44,7 @@ export type PendenciaOrigin = 'reembolso' | 'sobra' | 'resistencia' | 'estouro' 
 export interface Pendencia {
   id: string
   caixinhaId?: string // where the value lands when confirmed
+  transactionId?: string // for reembolso: the expense being paid back
   amount: number
   origin: PendenciaOrigin
   note?: string

@@ -34,7 +34,7 @@ export default function PendingAlert() {
             {pendentes.length} lembrete{pendentes.length > 1 ? 's' : ''} a confirmar
           </span>
           <span className="block text-xs text-brand-400">
-            {formatMoney(total)} aguardando você transferir de verdade
+            {formatMoney(total)} aguardando sua confirmação
           </span>
         </span>
         <span className="text-neutral-400">›</span>

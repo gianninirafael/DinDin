@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useStore } from '../store'
-import { formatAmount, formatDMY, todayISO } from '../lib/format'
+import { formatAmount, formatMoney, formatDMY, todayISO } from '../lib/format'
+import { playClick, playConfirm } from '../lib/sound'
+import type { Caixinha } from '../types'
 import {
   countsForCap,
   flexibleMonthly,
@@ -14,6 +16,10 @@ import {
 
 type View = 'day' | 'week' | 'month'
 
+function parseNum(s: string): number {
+  return parseFloat(s.replace(/\./g, '').replace(',', '.')) || 0
+}
+
 const VIEWS: { key: View; label: string }[] = [
   { key: 'day', label: 'Dia' },
   { key: 'week', label: 'Semana' },
@@ -23,9 +29,13 @@ const VIEWS: { key: View; label: string }[] = [
 const WEEKDAY_SHORT = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
 
 export default function Today() {
-  const { transactions, categories } = useStore()
+  const { transactions, categories, caixinhas, weeklyWallet, setWeeklyWallet, createPendencia } =
+    useStore()
   const [view, setView] = useState<View>('day')
+  const [sobraOpen, setSobraOpen] = useState(false)
+  const [walletEdit, setWalletEdit] = useState(false)
   const today = todayISO()
+  const usingWallet = weeklyWallet > 0
 
   const flexible = useMemo(() => flexibleMonthly(categories), [categories])
   const capCatIds = useMemo(
@@ -37,28 +47,29 @@ export default function Today() {
   const monthKey = today.slice(0, 7)
   const mDays = useMemo(() => monthDays(monthKey), [monthKey])
 
-  // Period cap + spent
+  // Period cap + spent. When the physical weekly wallet is set, it is the
+  // source of truth: day = weekly/7, week = weekly, month ≈ weekly per week.
   const { cap, spent, periodLabel } = useMemo(() => {
     if (view === 'day') {
       return {
-        cap: dailyCap(today, flexible),
+        cap: usingWallet ? weeklyWallet / 7 : dailyCap(today, flexible),
         spent: spendInRange(transactions, today, today, capCatIds),
         periodLabel: 'hoje',
       }
     }
     if (view === 'week') {
       return {
-        cap: capOverDays(week.days, flexible),
+        cap: usingWallet ? weeklyWallet : capOverDays(week.days, flexible),
         spent: spendInRange(transactions, week.start, week.end, capCatIds),
         periodLabel: 'esta semana',
       }
     }
     return {
-      cap: capOverDays(mDays, flexible),
+      cap: usingWallet ? (weeklyWallet * mDays.length) / 7 : capOverDays(mDays, flexible),
       spent: spendInRange(transactions, mDays[0], mDays[mDays.length - 1], capCatIds),
       periodLabel: 'este mês',
     }
-  }, [view, today, flexible, capCatIds, transactions, week, mDays])
+  }, [view, today, flexible, capCatIds, transactions, week, mDays, usingWallet, weeklyWallet])
 
   const left = cap - spent
   const over = left < 0
@@ -87,13 +98,16 @@ export default function Today() {
         ))}
       </div>
 
-      {flexible === 0 ? (
+      {flexible === 0 && !usingWallet ? (
         <div className="rounded-card bg-ink-soft p-6 text-center">
           <p className="text-[15px] font-medium text-neutral-200">Sem teto ainda</p>
           <p className="mt-1 text-sm text-neutral-500">
-            Defina orçamentos nas categorias (aba Orçamento) que contam pro teto diário e o número
-            aparece aqui.
+            Defina orçamentos nas categorias (aba Orçamento) que contam pro teto diário — ou use a
+            carteira semanal abaixo.
           </p>
+          <button onClick={() => { playClick(); setWalletEdit(true) }} className="mt-4 rounded-full bg-ink-muted px-4 py-2 text-sm font-semibold text-brand-400">
+            💵 Usar carteira semanal
+          </button>
         </div>
       ) : (
         <>
@@ -123,6 +137,35 @@ export default function Today() {
                 }}
               />
             </div>
+          </div>
+
+          {/* Actions: guardar sobra / repor / carteira */}
+          <div className="mt-3 space-y-2">
+            {!over && left > 0 && (
+              <button
+                onClick={() => { playClick(); setSobraOpen(true) }}
+                className="w-full rounded-2xl bg-ink-soft py-3 text-sm font-semibold text-brand-400 active:bg-ink-muted"
+              >
+                💰 Guardar sobra ({formatAmount(left)}) numa caixinha
+              </button>
+            )}
+            {over && usingWallet && (
+              <button
+                onClick={async () => {
+                  await createPendencia({ origin: 'estouro', amount: -left, note: 'Repor carteira semanal' })
+                  playConfirm()
+                }}
+                className="w-full rounded-2xl border border-rose-400/40 bg-rose-400/10 py-3 text-sm font-semibold text-rose-400"
+              >
+                ⚠︎ Marcar reposição de {formatAmount(-left)}
+              </button>
+            )}
+            <button
+              onClick={() => { playClick(); setWalletEdit(true) }}
+              className="w-full py-1 text-center text-xs text-neutral-500"
+            >
+              {usingWallet ? `Carteira semanal: ${formatMoney(weeklyWallet)}/sem · editar` : 'Usar carteira semanal física'}
+            </button>
           </div>
 
           {/* Week breakdown */}
@@ -165,6 +208,82 @@ export default function Today() {
           </p>
         </>
       )}
+
+      {sobraOpen && (
+        <SobraSheet
+          amount={left}
+          caixinhas={caixinhas}
+          onClose={() => setSobraOpen(false)}
+          onPick={async (cx) => {
+            await createPendencia({ origin: 'sobra', caixinhaId: cx.id, amount: left, note: `Sobra ${periodLabel}` })
+            playConfirm()
+            setSobraOpen(false)
+          }}
+        />
+      )}
+
+      {walletEdit && (
+        <WalletSheet
+          initial={weeklyWallet}
+          onClose={() => setWalletEdit(false)}
+          onSave={(v) => { setWeeklyWallet(v); setWalletEdit(false) }}
+        />
+      )}
+    </div>
+  )
+}
+
+function SobraSheet({
+  amount, caixinhas, onClose, onPick,
+}: {
+  amount: number
+  caixinhas: Caixinha[]
+  onClose: () => void
+  onPick: (cx: Caixinha) => void
+}) {
+  return (
+    <div className="fixed inset-0 z-[60] flex items-end bg-black/60" onClick={onClose}>
+      <div className="max-h-[85vh] w-full overflow-y-auto rounded-t-3xl bg-ink-soft p-5 pb-8" onClick={(e) => e.stopPropagation()}>
+        <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-ink-line" />
+        <h3 className="text-lg font-semibold text-white">Guardar sobra de {formatMoney(amount)}</h3>
+        <p className="mb-4 text-sm text-neutral-500">Escolha a caixinha. Vira um lembrete até você transferir de verdade.</p>
+        {caixinhas.length === 0 ? (
+          <p className="py-8 text-center text-sm text-neutral-500">Crie uma caixinha primeiro (Início → 🐷 Caixinhas).</p>
+        ) : (
+          <div className="space-y-2">
+            {caixinhas.map((c) => (
+              <button key={c.id} onClick={() => onPick(c)}
+                className="flex w-full items-center gap-3 rounded-2xl bg-ink-muted px-4 py-3 text-left active:bg-ink-line">
+                <span className="grid h-9 w-9 place-items-center rounded-full text-base" style={{ background: c.color + '33' }}>{c.icon}</span>
+                <span className="min-w-0 flex-1 truncate text-[15px] font-medium text-white">{c.name}</span>
+                <span className="tnum text-sm text-neutral-400">{formatMoney(c.balance)}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function WalletSheet({ initial, onClose, onSave }: { initial: number; onClose: () => void; onSave: (v: number) => void }) {
+  const [raw, setRaw] = useState(initial ? initial.toFixed(2).replace('.', ',') : '')
+  return (
+    <div className="fixed inset-0 z-[60] flex items-end bg-black/60" onClick={onClose}>
+      <div className="w-full rounded-t-3xl bg-ink-soft p-5 pb-8" onClick={(e) => e.stopPropagation()}>
+        <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-ink-line" />
+        <h3 className="text-lg font-semibold text-white">Carteira semanal física</h3>
+        <p className="mb-4 text-sm text-neutral-500">
+          Valor guardado por semana. O app libera a fatia do dia (valor ÷ 7) como saldo gastável. 0 desliga.
+        </p>
+        <div className="flex items-center gap-2 rounded-2xl bg-ink-muted px-4">
+          <span className="text-lg font-semibold text-neutral-500">R$</span>
+          <input autoFocus value={raw} onChange={(e) => setRaw(e.target.value)} inputMode="decimal" placeholder="0,00"
+            className="tnum w-full bg-transparent py-3.5 text-right text-2xl font-bold text-white outline-none placeholder:text-neutral-600" />
+        </div>
+        <button onClick={() => { playClick(); onSave(parseNum(raw)) }}
+          className="mt-4 w-full rounded-2xl bg-brand-500 py-4 text-base font-bold text-black">Salvar</button>
+      </div>
     </div>
   )
 }

@@ -121,12 +121,19 @@ export default function Home({
                       >
                         {cat?.icon ?? '❓'}
                       </span>
-                      <span className="min-w-0 flex-1 truncate text-[15px] font-medium text-white">
-                        {t.note || cat?.label || 'Sem categoria'}
+                      <span className="flex min-w-0 flex-1 items-center gap-1.5">
+                        <span className="truncate text-[15px] font-medium text-white">
+                          {t.note || cat?.label || 'Sem categoria'}
+                        </span>
+                        {t.reimbursed ? (
+                          <span className="flex-shrink-0 rounded bg-emerald-400/15 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-400">reembolsado</span>
+                        ) : t.reimbursable ? (
+                          <span className="flex-shrink-0 rounded bg-brand-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-brand-400">a receber</span>
+                        ) : null}
                       </span>
                       <span
                         className={`tnum text-[15px] font-semibold ${
-                          t.kind === 'income' ? 'text-emerald-400' : 'text-white'
+                          t.reimbursed ? 'text-neutral-600 line-through' : t.kind === 'income' ? 'text-emerald-400' : 'text-white'
                         }`}
                       >
                         {t.kind === 'income' ? '+' : '−'} {formatAmount(t.amount)}
