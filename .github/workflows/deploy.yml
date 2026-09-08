@@ -4,16 +4,13 @@ on:
   push:
     branches:
       - main
-      - claude/personal-finance-app-ovwtsk
   workflow_dispatch:
 
-# Allow the workflow to publish to Pages
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# One deploy at a time; let an in-progress run finish
 concurrency:
   group: pages
   cancel-in-progress: false
@@ -23,12 +20,32 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
+
+      # v1 (stable) -> site root
       - run: npm ci
       - run: npm run build
+
+      # v2 (development) -> /v2/ , built from the `v2` branch with isolated storage.
+      # Skips cleanly until the v2 branch exists.
+      - name: Build v2 (if the branch exists)
+        run: |
+          if git ls-remote --exit-code --heads origin v2 >/dev/null 2>&1; then
+            echo "Building v2 from branch v2"
+            rm -rf /tmp/v2src
+            git worktree add /tmp/v2src v2
+            ( cd /tmp/v2src && npm ci && VITE_DINDIN_NS=dindin_v2 npm run build )
+            mkdir -p dist/v2
+            cp -r /tmp/v2src/dist/* dist/v2/
+          else
+            echo "No v2 branch yet — skipping."
+          fi
+
       - uses: actions/configure-pages@v5
         with:
           enablement: true
