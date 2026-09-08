@@ -13,8 +13,9 @@ import {
 } from './lib/db'
 import type { BackupData } from './lib/backup'
 import { monthKeyOf, todayISO } from './lib/format'
+import { ns } from './lib/ns'
 
-const LAST_DATE_KEY = 'dindin.lastDate'
+const LAST_DATE_KEY = ns('lastDate')
 
 function readLastDate(): string {
   try {
