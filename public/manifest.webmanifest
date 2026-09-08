@@ -1,7 +1,7 @@
 {
-  "name": "DinDin",
-  "short_name": "DinDin",
-  "description": "Controle de gastos pessoal — base-zero, manual e local.",
+  "name": "DinDin v2 (dev)",
+  "short_name": "DinDin v2",
+  "description": "DinDin v2 — versão de desenvolvimento (orçamento base-zero).",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
