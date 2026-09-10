@@ -13,6 +13,7 @@ import Today from './components/Today'
 import Caixinhas from './components/Caixinhas'
 import Habits from './components/Habits'
 import Planejar from './components/Planejar'
+import Desejos from './components/Desejos'
 import AddSheet from './components/AddSheet'
 import VoiceSheet from './components/VoiceSheet'
 
@@ -32,6 +33,7 @@ export default function App() {
   const [caixinhasOpen, setCaixinhasOpen] = useState(false)
   const [habitsOpen, setHabitsOpen] = useState(false)
   const [planejarOpen, setPlanejarOpen] = useState(false)
+  const [desejosOpen, setDesejosOpen] = useState(false)
   const [soundOn, setSoundOnState] = useState(isSoundOn())
   const restoreInputRef = useRef<HTMLInputElement>(null)
 
@@ -95,7 +97,11 @@ export default function App() {
   return (
     <div className="min-h-full bg-ink">
       {tab === 'home' ? (
-        <Home onSelect={setEditingTx} onOpenCaixinhas={() => setCaixinhasOpen(true)} />
+        <Home
+          onSelect={setEditingTx}
+          onOpenCaixinhas={() => setCaixinhasOpen(true)}
+          onOpenDesejos={() => setDesejosOpen(true)}
+        />
       ) : tab === 'today' ? (
         <Today />
       ) : tab === 'budget' ? (
@@ -246,6 +252,7 @@ export default function App() {
       {caixinhasOpen && <Caixinhas onClose={() => setCaixinhasOpen(false)} />}
       {habitsOpen && <Habits onClose={() => setHabitsOpen(false)} />}
       {planejarOpen && <Planejar onClose={() => setPlanejarOpen(false)} />}
+      {desejosOpen && <Desejos onClose={() => setDesejosOpen(false)} />}
     </div>
   )
 }

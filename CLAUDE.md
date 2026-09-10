@@ -186,6 +186,21 @@ Two live builds from this one repo, both on GitHub Pages (same origin):
   monthly total; (d) *Checkpoint semanal* — week teto/gasto/sobra from
   `budget.ts` (respects `weeklyWallet`) + open-pendência count, a Sunday-ritual
   prompt. Read-only over existing state except the two writes named.
+- **Fase 7 — Atrito (anti-impulso):** three self-contained frictions.
+  - *Tag impulso:* `Transaction.impulse` — a second AddSheet toggle (expense,
+    next to Reembolsável, rose-tinted). Home tags such rows "impulso".
+    `monthImpulse(txs, monthKey)` sums flagged expenses (excludes reimbursed);
+    shown on the Desejos screen. Purely a label — no effect on budget/cap math.
+  - *Desejos + pausa 24h:* `Desejo` (DB v6, store `desejos`) + `Desejos.tsx`,
+    opened from a "💭 Desejos" Home card. Add name+valor → starts `aberto` and
+    paused; `DESEJO_COOLDOWN_MS` (24h) must pass (`releaseAt`) before you can
+    decide. `decideDesejo` sets `comprei` or `deixei_passar` — no transaction is
+    created (buys are logged normally; letting go counts as saved). Home card +
+    hero show "economizei deixando passar" = Σ amount of `deixei_passar`.
+  - *Custo em horas:* `hourlyRate` (localStorage via ns, set in the Desejos rate
+    sheet). Each desejo shows "≈ Xh de trabalho" = amount ÷ hourlyRate.
+  Nothing here touches transaction or budget math beyond the additive
+  `impulse` flag.
 
 ## Roadmap / not built yet
 

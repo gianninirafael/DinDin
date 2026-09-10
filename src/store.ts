@@ -24,8 +24,11 @@ import {
   loadFixedBills,
   putFixedBill,
   deleteFixedBillFromDB,
+  loadDesejos,
+  putDesejo,
+  deleteDesejoFromDB,
 } from './lib/db'
-import type { Caixinha, Pendencia, Habit, HabitEntry, FixedBill } from './types'
+import type { Caixinha, Pendencia, Habit, HabitEntry, FixedBill, Desejo } from './types'
 import type { BackupData } from './lib/backup'
 import { monthKeyOf, todayISO } from './lib/format'
 import { ns } from './lib/ns'
@@ -33,6 +36,18 @@ import { ns } from './lib/ns'
 const LAST_DATE_KEY = ns('lastDate')
 const AVAILABLE_KEY = ns('availableToBudget')
 const WEEKLY_KEY = ns('weeklyWallet')
+const HOURLY_KEY = ns('hourlyRate')
+
+/** Fase 7 pause window before a desejo can be decided. */
+export const DESEJO_COOLDOWN_MS = 24 * 60 * 60 * 1000
+
+function readHourly(): number {
+  try {
+    return Number(localStorage.getItem(HOURLY_KEY)) || 0
+  } catch {
+    return 0
+  }
+}
 
 function readWeekly(): number {
   try {
@@ -66,6 +81,7 @@ interface State {
   habits: Habit[]
   habitEntries: HabitEntry[]
   fixedBills: FixedBill[]
+  desejos: Desejo[]
   loaded: boolean
   activeMonth: string // yyyy-mm
   lastDate: string // remembered date for the next new entry
@@ -73,6 +89,8 @@ interface State {
   setAvailableToBudget: (value: number) => void
   weeklyWallet: number // "carteira semanal física" amount; 0 = disabled
   setWeeklyWallet: (value: number) => void
+  hourlyRate: number // "quanto vale sua hora" — for cost-in-work-hours (Fase 7)
+  setHourlyRate: (value: number) => void
   load: () => Promise<void>
   addTransaction: (tx: Omit<Transaction, 'id' | 'createdAt'>) => Promise<string>
   updateTransaction: (tx: Transaction) => Promise<void>
@@ -98,6 +116,10 @@ interface State {
   // contas fixas (Fase 6)
   saveFixedBill: (b: FixedBill) => Promise<void>
   removeFixedBill: (id: string) => Promise<void>
+  // desejos (Fase 7)
+  addDesejo: (input: { name: string; amount: number; note?: string }) => Promise<void>
+  removeDesejo: (id: string) => Promise<void>
+  decideDesejo: (id: string, decision: 'comprei' | 'deixei_passar') => Promise<void>
 }
 
 export const useStore = create<State>((set, get) => ({
@@ -108,11 +130,13 @@ export const useStore = create<State>((set, get) => ({
   habits: [],
   habitEntries: [],
   fixedBills: [],
+  desejos: [],
   loaded: false,
   activeMonth: monthKeyOf(todayISO()),
   lastDate: readLastDate(),
   availableToBudget: readAvailable(),
   weeklyWallet: readWeekly(),
+  hourlyRate: readHourly(),
 
   setAvailableToBudget: (value) => {
     try {
@@ -132,6 +156,15 @@ export const useStore = create<State>((set, get) => ({
     set({ weeklyWallet: value })
   },
 
+  setHourlyRate: (value) => {
+    try {
+      localStorage.setItem(HOURLY_KEY, String(value))
+    } catch {
+      // ignore storage failures
+    }
+    set({ hourlyRate: value })
+  },
+
   load: async () => {
     const [transactions, categories, caixinhas, pendencias, habits, habitEntries] =
       await Promise.all([
@@ -142,7 +175,7 @@ export const useStore = create<State>((set, get) => ({
         loadHabits(),
         loadHabitEntries(),
       ])
-    const fixedBills = await loadFixedBills()
+    const [fixedBills, desejos] = await Promise.all([loadFixedBills(), loadDesejos()])
     set({
       transactions,
       categories: sortCats(categories),
@@ -151,6 +184,7 @@ export const useStore = create<State>((set, get) => ({
       habits: [...habits].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
       habitEntries,
       fixedBills: [...fixedBills].sort((a, b) => a.dueDay - b.dueDay),
+      desejos: [...desejos].sort((a, b) => b.createdAt - a.createdAt),
       loaded: true,
     })
   },
@@ -383,6 +417,37 @@ export const useStore = create<State>((set, get) => ({
     set({ fixedBills: get().fixedBills.filter((b) => b.id !== id) })
   },
 
+  // A desejo starts "aberto" and paused; the 24h cooldown must pass before it
+  // can be decided (comprei / deixei passar). No transaction is created here —
+  // if bought, the owner logs it normally; if let go, the amount counts as saved.
+  addDesejo: async (input) => {
+    const now = Date.now()
+    const d: Desejo = {
+      id: crypto.randomUUID(),
+      name: input.name,
+      amount: input.amount,
+      note: input.note,
+      createdAt: now,
+      releaseAt: now + DESEJO_COOLDOWN_MS,
+      status: 'aberto',
+    }
+    await putDesejo(d)
+    set({ desejos: [d, ...get().desejos] })
+  },
+
+  removeDesejo: async (id) => {
+    await deleteDesejoFromDB(id)
+    set({ desejos: get().desejos.filter((d) => d.id !== id) })
+  },
+
+  decideDesejo: async (id, decision) => {
+    const d = get().desejos.find((x) => x.id === id)
+    if (!d) return
+    const updated: Desejo = { ...d, status: decision, decidedAt: Date.now() }
+    await putDesejo(updated)
+    set({ desejos: get().desejos.map((x) => (x.id === id ? updated : x)) })
+  },
+
   setActiveMonth: (activeMonth) => set({ activeMonth }),
 }))
 
@@ -434,6 +499,17 @@ export function monthSpendByCategory(txs: Transaction[], monthKey: string): Reco
 /** Sum of all category monthly budgets (the total already allocated). */
 export function totalBudgeted(cats: Category[]): number {
   return cats.reduce((s, c) => s + (c.monthlyBudget ?? 0), 0)
+}
+
+/** Total flagged-impulse expense within the month (excludes reimbursed). */
+export function monthImpulse(txs: Transaction[], monthKey: string): number {
+  let sum = 0
+  for (const t of txs) {
+    if (t.kind !== 'expense' || t.reimbursed || !t.impulse) continue
+    if (!t.date.startsWith(monthKey)) continue
+    sum += t.amount
+  }
+  return sum
 }
 
 export function availableMonths(txs: Transaction[]): string[] {

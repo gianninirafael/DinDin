@@ -1,5 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
-import type { Transaction, Category, Caixinha, Pendencia, Habit, HabitEntry, FixedBill } from '../types'
+import type { Transaction, Category, Caixinha, Pendencia, Habit, HabitEntry, FixedBill, Desejo } from '../types'
 import { DEFAULT_CATEGORIES } from '../data/categories'
 import { DB_NAME } from './ns'
 
@@ -33,13 +33,17 @@ interface DinDinDB extends DBSchema {
     key: string
     value: FixedBill
   }
+  desejos: {
+    key: string
+    value: Desejo
+  }
 }
 
 let dbPromise: Promise<IDBPDatabase<DinDinDB>> | null = null
 
 function getDB() {
   if (!dbPromise) {
-    dbPromise = openDB<DinDinDB>(DB_NAME, 4, {
+    dbPromise = openDB<DinDinDB>(DB_NAME, 6, {
       upgrade(db, oldVersion) {
         if (oldVersion < 1) {
           const store = db.createObjectStore('transactions', { keyPath: 'id' })
@@ -58,6 +62,9 @@ function getDB() {
         }
         if (oldVersion < 5) {
           db.createObjectStore('fixedBills', { keyPath: 'id' })
+        }
+        if (oldVersion < 6) {
+          db.createObjectStore('desejos', { keyPath: 'id' })
         }
       },
     })
@@ -196,4 +203,21 @@ export async function putFixedBill(b: FixedBill): Promise<void> {
 export async function deleteFixedBillFromDB(id: string): Promise<void> {
   const db = await getDB()
   await db.delete('fixedBills', id)
+}
+
+// ---- desejos (Fase 7) ----
+
+export async function loadDesejos(): Promise<Desejo[]> {
+  const db = await getDB()
+  return db.getAll('desejos')
+}
+
+export async function putDesejo(d: Desejo): Promise<void> {
+  const db = await getDB()
+  await db.put('desejos', d)
+}
+
+export async function deleteDesejoFromDB(id: string): Promise<void> {
+  const db = await getDB()
+  await db.delete('desejos', id)
 }

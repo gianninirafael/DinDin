@@ -22,13 +22,20 @@ function groupByDay(txs: Transaction[]) {
 export default function Home({
   onSelect,
   onOpenCaixinhas,
+  onOpenDesejos,
 }: {
   onSelect: (tx: Transaction) => void
   onOpenCaixinhas: () => void
+  onOpenDesejos: () => void
 }) {
-  const { transactions, activeMonth, caixinhas } = useStore()
+  const { transactions, activeMonth, caixinhas, desejos } = useStore()
   const catMap = useCategoryMap()
   const totalSaved = useMemo(() => caixinhas.reduce((s, c) => s + c.balance, 0), [caixinhas])
+  const openDesejos = useMemo(() => desejos.filter((d) => d.status === 'aberto').length, [desejos])
+  const economizado = useMemo(
+    () => desejos.filter((d) => d.status === 'deixei_passar').reduce((s, d) => s + d.amount, 0),
+    [desejos],
+  )
 
   const monthTxs = useMemo(
     () => monthTransactions(transactions, activeMonth),
@@ -76,6 +83,25 @@ export default function Home({
             </span>
           </span>
           <span className="tnum text-[15px] font-bold text-brand-400">{formatMoney(totalSaved)}</span>
+          <span className="text-neutral-400">›</span>
+        </button>
+
+        <button
+          onClick={onOpenDesejos}
+          className="mt-2 flex w-full items-center gap-3 rounded-card bg-ink-soft px-4 py-3 text-left active:bg-ink-muted"
+        >
+          <span className="text-xl">💭</span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[15px] font-semibold text-white">Desejos</span>
+            <span className="block text-xs text-neutral-500">
+              {openDesejos === 0
+                ? 'Espere 24h antes de comprar por impulso'
+                : `${openDesejos} na espera${economizado > 0 ? ' · já economizou deixando passar' : ''}`}
+            </span>
+          </span>
+          {economizado > 0 && (
+            <span className="tnum text-[15px] font-bold text-emerald-400">{formatMoney(economizado)}</span>
+          )}
           <span className="text-neutral-400">›</span>
         </button>
       </div>
@@ -130,6 +156,9 @@ export default function Home({
                         ) : t.reimbursable ? (
                           <span className="flex-shrink-0 rounded bg-brand-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-brand-400">a receber</span>
                         ) : null}
+                        {t.impulse && !t.reimbursed && (
+                          <span className="flex-shrink-0 rounded bg-rose-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-rose-400">impulso</span>
+                        )}
                       </span>
                       <span
                         className={`tnum text-[15px] font-semibold ${

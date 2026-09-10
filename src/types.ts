@@ -21,6 +21,20 @@ export interface Transaction {
   createdAt: number
   reimbursable?: boolean // expense the owner expects to be paid back
   reimbursed?: boolean // reimbursement received → excluded from net spend
+  impulse?: boolean // flagged as an impulse buy (Fase 7 — atrito)
+}
+
+// ---- Desejos / lista de espera (Fase 7 — atrito) ----
+
+export interface Desejo {
+  id: string
+  name: string
+  amount: number // estimated cost
+  note?: string
+  createdAt: number
+  releaseAt: number // when the pause lifts (createdAt + cooldown)
+  status: 'aberto' | 'comprei' | 'deixei_passar'
+  decidedAt?: number
 }
 
 // ---- Caixinha mechanism (Fase 3) ----
