@@ -27,8 +27,12 @@ import {
   loadDesejos,
   putDesejo,
   deleteDesejoFromDB,
+  loadAccounts,
+  putAccount,
+  deleteAccountFromDB,
+  DEFAULT_ACCOUNT_ID,
 } from './lib/db'
-import type { Caixinha, Pendencia, Habit, HabitEntry, FixedBill, Desejo } from './types'
+import type { Caixinha, Pendencia, Habit, HabitEntry, FixedBill, Desejo, Account } from './types'
 import type { BackupData } from './lib/backup'
 import { monthKeyOf, todayISO } from './lib/format'
 import { ns } from './lib/ns'
@@ -37,6 +41,7 @@ const LAST_DATE_KEY = ns('lastDate')
 const AVAILABLE_KEY = ns('availableToBudget')
 const WEEKLY_KEY = ns('weeklyWallet')
 const HOURLY_KEY = ns('hourlyRate')
+const LAST_ACCOUNT_KEY = ns('lastAccount')
 
 /** Fase 7 pause window before a desejo can be decided. */
 export const DESEJO_COOLDOWN_MS = 24 * 60 * 60 * 1000
@@ -46,6 +51,14 @@ function readHourly(): number {
     return Number(localStorage.getItem(HOURLY_KEY)) || 0
   } catch {
     return 0
+  }
+}
+
+function readLastAccount(): string {
+  try {
+    return localStorage.getItem(LAST_ACCOUNT_KEY) || DEFAULT_ACCOUNT_ID
+  } catch {
+    return DEFAULT_ACCOUNT_ID
   }
 }
 
@@ -82,6 +95,7 @@ interface State {
   habitEntries: HabitEntry[]
   fixedBills: FixedBill[]
   desejos: Desejo[]
+  accounts: Account[]
   loaded: boolean
   activeMonth: string // yyyy-mm
   lastDate: string // remembered date for the next new entry
@@ -91,6 +105,8 @@ interface State {
   setWeeklyWallet: (value: number) => void
   hourlyRate: number // "quanto vale sua hora" — for cost-in-work-hours (Fase 7)
   setHourlyRate: (value: number) => void
+  lastAccountId: string // sticky account for the next new entry (Fase 8)
+  setLastAccountId: (id: string) => void
   load: () => Promise<void>
   addTransaction: (tx: Omit<Transaction, 'id' | 'createdAt'>) => Promise<string>
   updateTransaction: (tx: Transaction) => Promise<void>
@@ -120,6 +136,9 @@ interface State {
   addDesejo: (input: { name: string; amount: number; note?: string }) => Promise<void>
   removeDesejo: (id: string) => Promise<void>
   decideDesejo: (id: string, decision: 'comprei' | 'deixei_passar') => Promise<void>
+  // contas (Fase 8)
+  saveAccount: (a: Account) => Promise<void>
+  removeAccount: (id: string) => Promise<void>
 }
 
 export const useStore = create<State>((set, get) => ({
@@ -131,12 +150,14 @@ export const useStore = create<State>((set, get) => ({
   habitEntries: [],
   fixedBills: [],
   desejos: [],
+  accounts: [],
   loaded: false,
   activeMonth: monthKeyOf(todayISO()),
   lastDate: readLastDate(),
   availableToBudget: readAvailable(),
   weeklyWallet: readWeekly(),
   hourlyRate: readHourly(),
+  lastAccountId: readLastAccount(),
 
   setAvailableToBudget: (value) => {
     try {
@@ -165,6 +186,15 @@ export const useStore = create<State>((set, get) => ({
     set({ hourlyRate: value })
   },
 
+  setLastAccountId: (id) => {
+    try {
+      localStorage.setItem(LAST_ACCOUNT_KEY, id)
+    } catch {
+      // ignore storage failures
+    }
+    set({ lastAccountId: id })
+  },
+
   load: async () => {
     const [transactions, categories, caixinhas, pendencias, habits, habitEntries] =
       await Promise.all([
@@ -175,7 +205,11 @@ export const useStore = create<State>((set, get) => ({
         loadHabits(),
         loadHabitEntries(),
       ])
-    const [fixedBills, desejos] = await Promise.all([loadFixedBills(), loadDesejos()])
+    const [fixedBills, desejos, accounts] = await Promise.all([
+      loadFixedBills(),
+      loadDesejos(),
+      loadAccounts(),
+    ])
     set({
       transactions,
       categories: sortCats(categories),
@@ -185,6 +219,7 @@ export const useStore = create<State>((set, get) => ({
       habitEntries,
       fixedBills: [...fixedBills].sort((a, b) => a.dueDay - b.dueDay),
       desejos: [...desejos].sort((a, b) => b.createdAt - a.createdAt),
+      accounts: sortAccounts(accounts),
       loaded: true,
     })
   },
@@ -448,6 +483,22 @@ export const useStore = create<State>((set, get) => ({
     set({ desejos: get().desejos.map((x) => (x.id === id ? updated : x)) })
   },
 
+  saveAccount: async (a) => {
+    await putAccount(a)
+    const rest = get().accounts.filter((x) => x.id !== a.id)
+    set({ accounts: sortAccounts([...rest, a]) })
+  },
+
+  // Deleting an account leaves its transactions with a now-missing accountId;
+  // balances simply drop them (the UI shows "Conta removida" as a fallback).
+  removeAccount: async (id) => {
+    if (id === DEFAULT_ACCOUNT_ID) return // keep the fallback account
+    await deleteAccountFromDB(id)
+    const next = get().accounts.filter((a) => a.id !== id)
+    set({ accounts: next })
+    if (get().lastAccountId === id) get().setLastAccountId(DEFAULT_ACCOUNT_ID)
+  },
+
   setActiveMonth: (activeMonth) => set({ activeMonth }),
 }))
 
@@ -456,6 +507,10 @@ function sortCats(cats: Category[]): Category[] {
 }
 
 function sortCaixinhas(list: Caixinha[]): Caixinha[] {
+  return [...list].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+}
+
+function sortAccounts(list: Account[]): Account[] {
   return [...list].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
 }
 
@@ -510,6 +565,34 @@ export function monthImpulse(txs: Transaction[], monthKey: string): number {
     sum += t.amount
   }
   return sum
+}
+
+/**
+ * Current balance of an account = opening balance, plus income, minus expense
+ * (reimbursed expenses net to zero), plus/minus transfers in/out. Transactions
+ * with no accountId (saved before Fase 8) count toward the default account.
+ */
+export function accountBalance(acc: Account, txs: Transaction[]): number {
+  let bal = acc.openingBalance
+  for (const t of txs) {
+    const isOwner = t.accountId === acc.id || (acc.id === DEFAULT_ACCOUNT_ID && !t.accountId)
+    if (t.kind === 'transfer') {
+      if (isOwner) bal -= t.amount
+      if (t.toAccountId === acc.id) bal += t.amount
+    } else if (t.kind === 'income') {
+      if (isOwner) bal += t.amount
+    } else if (t.kind === 'expense') {
+      if (isOwner && !t.reimbursed) bal -= t.amount
+    }
+  }
+  return bal
+}
+
+/** Total across all non-archived accounts (patrimônio). */
+export function netWorth(accounts: Account[], txs: Transaction[]): number {
+  return accounts
+    .filter((a) => !a.archived)
+    .reduce((s, a) => s + accountBalance(a, txs), 0)
 }
 
 export function availableMonths(txs: Transaction[]): string[] {

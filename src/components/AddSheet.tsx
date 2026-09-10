@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
-import type { TxKind, Transaction, Category } from '../types'
+import type { TxKind, Transaction, Category, Account } from '../types'
 import { useStore } from '../store'
 import { formatAmount, formatDMY, isToday } from '../lib/format'
 import { playClick, playConfirm } from '../lib/sound'
@@ -26,9 +26,12 @@ export default function AddSheet({
   editing?: Transaction | null
   onClose: () => void
 }) {
-  const { addTransaction, updateTransaction, removeTransaction, createPendencia, categories, lastDate } =
-    useStore()
+  const {
+    addTransaction, updateTransaction, removeTransaction, createPendencia, categories, lastDate,
+    accounts, lastAccountId, setLastAccountId,
+  } = useStore()
   const isEdit = !!editing
+  const activeAccounts = useMemo(() => accounts.filter((a) => !a.archived), [accounts])
 
   const [kind, setKind] = useState<TxKind>(editing?.kind ?? 'expense')
   const [categoryId, setCategoryId] = useState<string | null>(editing?.categoryId ?? null)
@@ -37,6 +40,8 @@ export default function AddSheet({
   const [date, setDate] = useState(editing?.date ?? lastDate)
   const [reimbursable, setReimbursable] = useState(editing?.reimbursable ?? false)
   const [impulse, setImpulse] = useState(editing?.impulse ?? false)
+  const [accountId, setAccountId] = useState<string>(editing?.accountId ?? lastAccountId)
+  const [toAccountId, setToAccountId] = useState<string | null>(editing?.toAccountId ?? null)
 
   const [manageMode, setManageMode] = useState(false)
   const [catEditorOpen, setCatEditorOpen] = useState(false)
@@ -71,19 +76,25 @@ export default function AddSheet({
   }
 
   async function handleSave() {
-    if (amount <= 0 || !categoryId) return
+    if (!canSave) return
+    const isTransfer = kind === 'transfer'
     const isReimb = kind === 'expense' && reimbursable
     const isImpulse = kind === 'expense' && impulse
+    const base = {
+      kind,
+      amount,
+      categoryId: isTransfer ? '' : (categoryId ?? ''),
+      note: note.trim() || undefined,
+      date,
+      reimbursable: isReimb || undefined,
+      impulse: isImpulse || undefined,
+      accountId,
+      toAccountId: isTransfer ? toAccountId ?? undefined : undefined,
+    }
     if (isEdit && editing) {
-      await updateTransaction({
-        ...editing, kind, amount, categoryId, note: note.trim() || undefined, date,
-        reimbursable: isReimb || undefined, impulse: isImpulse || undefined,
-      })
+      await updateTransaction({ ...editing, ...base })
     } else {
-      const id = await addTransaction({
-        kind, amount, categoryId, note: note.trim() || undefined, date,
-        reimbursable: isReimb || undefined, impulse: isImpulse || undefined,
-      })
+      const id = await addTransaction(base)
       if (isReimb) {
         await createPendencia({
           origin: 'reembolso',
@@ -93,6 +104,7 @@ export default function AddSheet({
         })
       }
     }
+    if (!isTransfer) setLastAccountId(accountId)
     playConfirm()
     onClose()
   }
@@ -120,7 +132,10 @@ export default function AddSheet({
     }
   }
 
-  const canSave = amount > 0 && !!categoryId
+  const canSave =
+    kind === 'transfer'
+      ? amount > 0 && !!accountId && !!toAccountId && accountId !== toAccountId
+      : amount > 0 && !!categoryId && !!accountId
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-ink text-white">
@@ -134,7 +149,7 @@ export default function AddSheet({
           <button onClick={removeTx} className="text-base text-rose-400">
             Excluir
           </button>
-        ) : (
+        ) : kind !== 'transfer' ? (
           <button
             onClick={() => setManageMode((m) => !m)}
             className={`rounded-full px-3 py-1 text-sm font-medium ${
@@ -143,6 +158,8 @@ export default function AddSheet({
           >
             {manageMode ? 'Concluir' : 'Editar'}
           </button>
+        ) : (
+          <span className="w-16" />
         )}
       </div>
 
@@ -178,7 +195,38 @@ export default function AddSheet({
         </div>
       )}
 
-      {/* Category grid */}
+      {/* Transfer: pick origem → destino accounts instead of a category */}
+      {kind === 'transfer' ? (
+        <div className="min-h-0 flex-1 overflow-y-auto px-4">
+          <div className="space-y-3 py-2">
+            <div>
+              <p className="mb-1.5 px-1 text-xs font-semibold uppercase tracking-wide text-neutral-500">De</p>
+              <AccountChips
+                accounts={activeAccounts}
+                selected={accountId}
+                exclude={toAccountId ?? undefined}
+                onSelect={setAccountId}
+              />
+            </div>
+            <div className="flex justify-center text-xl text-neutral-600">↓</div>
+            <div>
+              <p className="mb-1.5 px-1 text-xs font-semibold uppercase tracking-wide text-neutral-500">Para</p>
+              <AccountChips
+                accounts={activeAccounts}
+                selected={toAccountId ?? ''}
+                exclude={accountId}
+                onSelect={setToAccountId}
+              />
+            </div>
+            {activeAccounts.length < 2 && (
+              <p className="px-1 pt-2 text-xs text-neutral-600">
+                Você só tem uma conta. Crie outra em Início › Contas para transferir entre elas.
+              </p>
+            )}
+          </div>
+        </div>
+      ) : (
+      /* Category grid */
       <div className="min-h-0 flex-1 overflow-y-auto px-4">
         <div className="grid grid-cols-4 gap-x-2 gap-y-3 pb-2">
           {visibleCats.map((c) => {
@@ -219,6 +267,7 @@ export default function AddSheet({
           </button>
         </div>
       </div>
+      )}
 
       {/* Amount */}
       <div className="px-6 pb-1 pt-2 text-right">
@@ -267,6 +316,11 @@ export default function AddSheet({
                 <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${impulse ? 'left-[1.125rem]' : 'left-0.5'}`} />
               </span>
             </button>
+          </div>
+        )}
+        {kind !== 'transfer' && activeAccounts.length > 1 && (
+          <div className="mt-2">
+            <AccountChips accounts={activeAccounts} selected={accountId} onSelect={setAccountId} />
           </div>
         )}
       </div>
@@ -325,6 +379,43 @@ export default function AddSheet({
       )}
 
       {reorderOpen && <ReorderSheet kind={kind} onClose={() => setReorderOpen(false)} />}
+    </div>
+  )
+}
+
+function AccountChips({
+  accounts,
+  selected,
+  exclude,
+  onSelect,
+}: {
+  accounts: Account[]
+  selected: string
+  exclude?: string
+  onSelect: (id: string) => void
+}) {
+  return (
+    <div className="flex gap-2 overflow-x-auto pb-1">
+      {accounts.map((a) => {
+        const active = a.id === selected
+        const dim = exclude === a.id
+        return (
+          <button
+            key={a.id}
+            onClick={() => { playClick(); onSelect(a.id) }}
+            className={`flex flex-shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-sm font-medium transition ${
+              dim ? 'opacity-30' : ''
+            }`}
+            style={{
+              background: active ? a.color : 'rgba(255,255,255,0.06)',
+              color: active ? '#000' : '#d4d4d4',
+            }}
+          >
+            <span>{a.icon}</span>
+            <span>{a.name}</span>
+          </button>
+        )
+      })}
     </div>
   )
 }

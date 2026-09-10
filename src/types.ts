@@ -15,13 +15,27 @@ export interface Transaction {
   id: string
   kind: TxKind
   amount: number // always positive; sign is derived from kind
-  categoryId: string
+  categoryId: string // '' for transfers (no category)
   note?: string
   date: string // ISO yyyy-mm-dd
   createdAt: number
   reimbursable?: boolean // expense the owner expects to be paid back
   reimbursed?: boolean // reimbursement received → excluded from net spend
   impulse?: boolean // flagged as an impulse buy (Fase 7 — atrito)
+  accountId?: string // account the money moved in/out of (Fase 8); for transfer = origem
+  toAccountId?: string // transfer destination account (Fase 8)
+}
+
+// ---- Contas (Fase 8 — múltiplas contas) ----
+
+export interface Account {
+  id: string
+  name: string // "Wise", "Nubank PJ", "Nubank PF"
+  icon: string // emoji
+  color: string // hex bubble tint
+  openingBalance: number // balance the account started with when added
+  order?: number
+  archived?: boolean // hidden from pickers/summary but kept for history
 }
 
 // ---- Desejos / lista de espera (Fase 7 — atrito) ----

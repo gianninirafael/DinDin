@@ -201,10 +201,26 @@ Two live builds from this one repo, both on GitHub Pages (same origin):
     sheet). Each desejo shows "≈ Xh de trabalho" = amount ÷ hourlyRate.
   Nothing here touches transaction or budget math beyond the additive
   `impulse` flag.
+- **Fase 8 — Múltiplas contas:** `Account` (DB v7, store `accounts`) +
+  `Transaction.accountId` (origem) & `toAccountId` (transfer destino).
+  - A default account (`DEFAULT_ACCOUNT_ID`, "Carteira") is seeded on first run;
+    transactions saved before Fase 8 (no `accountId`) count toward it, so nothing
+    breaks. New entries carry an explicit `accountId` (sticky via `lastAccountId`
+    in localStorage, mirrored in the store — same idea as the sticky date).
+  - `accountBalance(acc, txs)` = openingBalance + income − expense (reimbursed
+    nets to zero) + transfers in − transfers out. `netWorth(accounts, txs)` sums
+    non-archived accounts. Transfers move money between two accounts and never
+    touch `monthTotals` (they're not expense/income) — internal moves.
+  - AddSheet: expense/income show an account chip strip (only when >1 account);
+    the Transferência tab replaces the category grid with a De→Para account
+    picker and requires `accountId !== toAccountId` (categoryId = '').
+  - `Contas.tsx` (opened from a "🏦 Contas" Home card): patrimônio hero + per-
+    account balance, create/edit sheet (name, emoji, color, saldo inicial). The
+    default account can't be deleted. Home renders transfers as "⇄ De → Para",
+    neutral, uncounted. Wise / Nubank PJ / Nubank PF are the intended accounts.
 
 ## Roadmap / not built yet
 
-- Transfers are selectable but treated like a plain entry (no account model yet).
 - Reports screen, search, calendar view, budgets/goals.
 - Optional cloud sync (data is device-local; JSON backup is the manual bridge).
 - Installable PWA manifest + service worker.

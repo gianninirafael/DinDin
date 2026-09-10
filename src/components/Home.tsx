@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { useStore, useCategoryMap, monthTransactions, monthTotals } from '../store'
+import { useStore, useCategoryMap, monthTransactions, monthTotals, netWorth } from '../store'
 import { formatAmount, formatMoney, dayHeading, monthShort } from '../lib/format'
 import type { Transaction } from '../types'
 import PendingAlert from './PendingAlert'
@@ -23,14 +23,19 @@ export default function Home({
   onSelect,
   onOpenCaixinhas,
   onOpenDesejos,
+  onOpenContas,
 }: {
   onSelect: (tx: Transaction) => void
   onOpenCaixinhas: () => void
   onOpenDesejos: () => void
+  onOpenContas: () => void
 }) {
-  const { transactions, activeMonth, caixinhas, desejos } = useStore()
+  const { transactions, activeMonth, caixinhas, desejos, accounts } = useStore()
   const catMap = useCategoryMap()
+  const accountMap = useMemo(() => Object.fromEntries(accounts.map((a) => [a.id, a])), [accounts])
   const totalSaved = useMemo(() => caixinhas.reduce((s, c) => s + c.balance, 0), [caixinhas])
+  const patrimonio = useMemo(() => netWorth(accounts, transactions), [accounts, transactions])
+  const nContas = accounts.filter((a) => !a.archived).length
   const openDesejos = useMemo(() => desejos.filter((d) => d.status === 'aberto').length, [desejos])
   const economizado = useMemo(
     () => desejos.filter((d) => d.status === 'deixei_passar').reduce((s, d) => s + d.amount, 0),
@@ -72,8 +77,25 @@ export default function Home({
         </div>
 
         <button
-          onClick={onOpenCaixinhas}
+          onClick={onOpenContas}
           className="mt-3 flex w-full items-center gap-3 rounded-card bg-ink-soft px-4 py-3 text-left active:bg-ink-muted"
+        >
+          <span className="text-xl">🏦</span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[15px] font-semibold text-white">Contas</span>
+            <span className="block text-xs text-neutral-500">
+              {nContas > 1 ? `${nContas} contas · patrimônio` : 'Saldo por conta · patrimônio'}
+            </span>
+          </span>
+          <span className={`tnum text-[15px] font-bold ${patrimonio < 0 ? 'text-rose-400' : 'text-brand-400'}`}>
+            {patrimonio < 0 ? '−' : ''}{formatMoney(Math.abs(patrimonio))}
+          </span>
+          <span className="text-neutral-400">›</span>
+        </button>
+
+        <button
+          onClick={onOpenCaixinhas}
+          className="mt-2 flex w-full items-center gap-3 rounded-card bg-ink-soft px-4 py-3 text-left active:bg-ink-muted"
         >
           <span className="text-xl">🐷</span>
           <span className="min-w-0 flex-1">
@@ -133,6 +155,9 @@ export default function Home({
               <div className="overflow-hidden rounded-card bg-ink-soft">
                 {g.items.map((t, i) => {
                   const cat = catMap[t.categoryId]
+                  const isTransfer = t.kind === 'transfer'
+                  const fromAcc = t.accountId ? accountMap[t.accountId] : undefined
+                  const toAcc = t.toAccountId ? accountMap[t.toAccountId] : undefined
                   return (
                     <button
                       key={t.id}
@@ -143,13 +168,15 @@ export default function Home({
                     >
                       <span
                         className="grid h-11 w-11 flex-shrink-0 place-items-center rounded-full text-lg"
-                        style={{ background: (cat?.color ?? '#666') + '33' }}
+                        style={{ background: isTransfer ? 'rgba(255,255,255,0.06)' : (cat?.color ?? '#666') + '33' }}
                       >
-                        {cat?.icon ?? '❓'}
+                        {isTransfer ? '⇄' : cat?.icon ?? '❓'}
                       </span>
                       <span className="flex min-w-0 flex-1 items-center gap-1.5">
                         <span className="truncate text-[15px] font-medium text-white">
-                          {t.note || cat?.label || 'Sem categoria'}
+                          {isTransfer
+                            ? `${fromAcc?.name ?? 'Conta'} → ${toAcc?.name ?? 'Conta'}`
+                            : t.note || cat?.label || 'Sem categoria'}
                         </span>
                         {t.reimbursed ? (
                           <span className="flex-shrink-0 rounded bg-emerald-400/15 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-400">reembolsado</span>
@@ -162,10 +189,16 @@ export default function Home({
                       </span>
                       <span
                         className={`tnum text-[15px] font-semibold ${
-                          t.reimbursed ? 'text-neutral-600 line-through' : t.kind === 'income' ? 'text-emerald-400' : 'text-white'
+                          isTransfer
+                            ? 'text-neutral-400'
+                            : t.reimbursed
+                              ? 'text-neutral-600 line-through'
+                              : t.kind === 'income'
+                                ? 'text-emerald-400'
+                                : 'text-white'
                         }`}
                       >
-                        {t.kind === 'income' ? '+' : '−'} {formatAmount(t.amount)}
+                        {isTransfer ? '' : t.kind === 'income' ? '+ ' : '− '}{formatAmount(t.amount)}
                       </span>
                     </button>
                   )

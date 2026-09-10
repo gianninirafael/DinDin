@@ -1,7 +1,10 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
-import type { Transaction, Category, Caixinha, Pendencia, Habit, HabitEntry, FixedBill, Desejo } from '../types'
+import type { Transaction, Category, Caixinha, Pendencia, Habit, HabitEntry, FixedBill, Desejo, Account } from '../types'
 import { DEFAULT_CATEGORIES } from '../data/categories'
 import { DB_NAME } from './ns'
+
+/** The account that owns transactions saved before accounts existed. */
+export const DEFAULT_ACCOUNT_ID = 'conta-principal'
 
 interface DinDinDB extends DBSchema {
   transactions: {
@@ -37,13 +40,17 @@ interface DinDinDB extends DBSchema {
     key: string
     value: Desejo
   }
+  accounts: {
+    key: string
+    value: Account
+  }
 }
 
 let dbPromise: Promise<IDBPDatabase<DinDinDB>> | null = null
 
 function getDB() {
   if (!dbPromise) {
-    dbPromise = openDB<DinDinDB>(DB_NAME, 6, {
+    dbPromise = openDB<DinDinDB>(DB_NAME, 7, {
       upgrade(db, oldVersion) {
         if (oldVersion < 1) {
           const store = db.createObjectStore('transactions', { keyPath: 'id' })
@@ -65,6 +72,9 @@ function getDB() {
         }
         if (oldVersion < 6) {
           db.createObjectStore('desejos', { keyPath: 'id' })
+        }
+        if (oldVersion < 7) {
+          db.createObjectStore('accounts', { keyPath: 'id' })
         }
       },
     })
@@ -220,4 +230,34 @@ export async function putDesejo(d: Desejo): Promise<void> {
 export async function deleteDesejoFromDB(id: string): Promise<void> {
   const db = await getDB()
   await db.delete('desejos', id)
+}
+
+// ---- contas (Fase 8) ----
+
+/** Loads accounts, seeding a single default account on first run. */
+export async function loadAccounts(): Promise<Account[]> {
+  const db = await getDB()
+  const existing = await db.getAll('accounts')
+  if (existing.length > 0) return existing
+
+  const seed: Account = {
+    id: DEFAULT_ACCOUNT_ID,
+    name: 'Carteira',
+    icon: '👛',
+    color: '#facc15',
+    openingBalance: 0,
+    order: 0,
+  }
+  await db.put('accounts', seed)
+  return [seed]
+}
+
+export async function putAccount(a: Account): Promise<void> {
+  const db = await getDB()
+  await db.put('accounts', a)
+}
+
+export async function deleteAccountFromDB(id: string): Promise<void> {
+  const db = await getDB()
+  await db.delete('accounts', id)
 }
