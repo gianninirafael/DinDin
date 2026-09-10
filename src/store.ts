@@ -21,8 +21,11 @@ import {
   deleteHabitFromDB,
   loadHabitEntries,
   putHabitEntry,
+  loadFixedBills,
+  putFixedBill,
+  deleteFixedBillFromDB,
 } from './lib/db'
-import type { Caixinha, Pendencia, Habit, HabitEntry } from './types'
+import type { Caixinha, Pendencia, Habit, HabitEntry, FixedBill } from './types'
 import type { BackupData } from './lib/backup'
 import { monthKeyOf, todayISO } from './lib/format'
 import { ns } from './lib/ns'
@@ -62,6 +65,7 @@ interface State {
   pendencias: Pendencia[]
   habits: Habit[]
   habitEntries: HabitEntry[]
+  fixedBills: FixedBill[]
   loaded: boolean
   activeMonth: string // yyyy-mm
   lastDate: string // remembered date for the next new entry
@@ -91,6 +95,9 @@ interface State {
   removeHabit: (id: string) => Promise<void>
   logHabitBuy: (items: { habitId: string; units: number }[], date: string) => Promise<void>
   resistHabit: (habitId: string, units: number, date: string) => Promise<void>
+  // contas fixas (Fase 6)
+  saveFixedBill: (b: FixedBill) => Promise<void>
+  removeFixedBill: (id: string) => Promise<void>
 }
 
 export const useStore = create<State>((set, get) => ({
@@ -100,6 +107,7 @@ export const useStore = create<State>((set, get) => ({
   pendencias: [],
   habits: [],
   habitEntries: [],
+  fixedBills: [],
   loaded: false,
   activeMonth: monthKeyOf(todayISO()),
   lastDate: readLastDate(),
@@ -134,6 +142,7 @@ export const useStore = create<State>((set, get) => ({
         loadHabits(),
         loadHabitEntries(),
       ])
+    const fixedBills = await loadFixedBills()
     set({
       transactions,
       categories: sortCats(categories),
@@ -141,6 +150,7 @@ export const useStore = create<State>((set, get) => ({
       pendencias,
       habits: [...habits].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
       habitEntries,
+      fixedBills: [...fixedBills].sort((a, b) => a.dueDay - b.dueDay),
       loaded: true,
     })
   },
@@ -360,6 +370,17 @@ export const useStore = create<State>((set, get) => ({
       amount,
       note: `Resisti: ${h.name}`,
     })
+  },
+
+  saveFixedBill: async (b) => {
+    await putFixedBill(b)
+    const rest = get().fixedBills.filter((x) => x.id !== b.id)
+    set({ fixedBills: [...rest, b].sort((a, c) => a.dueDay - c.dueDay) })
+  },
+
+  removeFixedBill: async (id) => {
+    await deleteFixedBillFromDB(id)
+    set({ fixedBills: get().fixedBills.filter((b) => b.id !== id) })
   },
 
   setActiveMonth: (activeMonth) => set({ activeMonth }),

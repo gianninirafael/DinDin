@@ -174,6 +174,18 @@ Two live builds from this one repo, both on GitHub Pages (same origin):
   annual projection (lifetime daily rate ×365) and clean-days streak. "Resisti"
   logs a `resist` entry and opens a `resistencia` pendência to the linked
   caixinha. Habit data does NOT touch transactions or the budget math.
+- **Fase 6 — Planejamento:** `FixedBill` (DB v5, store `fixedBills`) +
+  `Planejar.tsx`, a full-screen overlay opened from a "🗓️ Planejar" button on
+  the Orçamento header. Four sections: (a) *Renda irregular* — "dias cobertos" =
+  `availableToBudget` ÷ avg daily expense of the last 30 days (irregular-income
+  runway); (b) *Simulador de projeto* — custo total + prazo (meses) → aporte
+  mensal, compared against "sobra pra alocar" (`availableToBudget −
+  totalBudgeted`); "Criar meta rastreável" saves a `meta_com_prazo` caixinha
+  (target = custo, deadline = today + prazo months); (c) *Contas fixas* — list +
+  bottom-sheet editor (`saveFixedBill`/`removeFixedBill`, sorted by `dueDay`),
+  monthly total; (d) *Checkpoint semanal* — week teto/gasto/sobra from
+  `budget.ts` (respects `weeklyWallet`) + open-pendência count, a Sunday-ritual
+  prompt. Read-only over existing state except the two writes named.
 
 ## Roadmap / not built yet
 

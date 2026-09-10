@@ -10,7 +10,7 @@ function parseNum(s: string): number {
   return parseFloat(s.replace(/\./g, '').replace(',', '.')) || 0
 }
 
-export default function Budget() {
+export default function Budget({ onPlanejar }: { onPlanejar: () => void }) {
   const { transactions, categories, activeMonth, availableToBudget, setAvailableToBudget, saveCategory } =
     useStore()
 
@@ -35,8 +35,18 @@ export default function Budget() {
 
   return (
     <div className="mx-auto max-w-lg px-4 pb-28 pt-[4.5rem]">
-      <h1 className="px-1 text-2xl font-extrabold tracking-tight text-white">Orçamento</h1>
-      <p className="mb-4 px-1 text-sm text-neutral-500">{monthShort(activeMonth)} · base-zero</p>
+      <div className="mb-4 flex items-start justify-between px-1">
+        <div>
+          <h1 className="text-2xl font-extrabold tracking-tight text-white">Orçamento</h1>
+          <p className="text-sm text-neutral-500">{monthShort(activeMonth)} · base-zero</p>
+        </div>
+        <button
+          onClick={() => { playClick(); onPlanejar() }}
+          className="mt-1 flex items-center gap-1.5 rounded-full bg-ink-muted px-3.5 py-2 text-sm font-semibold text-brand-400 active:bg-ink-line"
+        >
+          🗓️ Planejar
+        </button>
+      </div>
 
       {/* Pool + to-allocate */}
       <div className="mb-4 rounded-card bg-ink-soft p-4">

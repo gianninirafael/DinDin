@@ -12,6 +12,7 @@ import Budget from './components/Budget'
 import Today from './components/Today'
 import Caixinhas from './components/Caixinhas'
 import Habits from './components/Habits'
+import Planejar from './components/Planejar'
 import AddSheet from './components/AddSheet'
 import VoiceSheet from './components/VoiceSheet'
 
@@ -30,6 +31,7 @@ export default function App() {
   const [voiceOpen, setVoiceOpen] = useState(false)
   const [caixinhasOpen, setCaixinhasOpen] = useState(false)
   const [habitsOpen, setHabitsOpen] = useState(false)
+  const [planejarOpen, setPlanejarOpen] = useState(false)
   const [soundOn, setSoundOnState] = useState(isSoundOn())
   const restoreInputRef = useRef<HTMLInputElement>(null)
 
@@ -97,7 +99,7 @@ export default function App() {
       ) : tab === 'today' ? (
         <Today />
       ) : tab === 'budget' ? (
-        <Budget />
+        <Budget onPlanejar={() => setPlanejarOpen(true)} />
       ) : (
         <Charts />
       )}
@@ -243,6 +245,7 @@ export default function App() {
       {voiceOpen && <VoiceSheet onClose={() => setVoiceOpen(false)} />}
       {caixinhasOpen && <Caixinhas onClose={() => setCaixinhasOpen(false)} />}
       {habitsOpen && <Habits onClose={() => setHabitsOpen(false)} />}
+      {planejarOpen && <Planejar onClose={() => setPlanejarOpen(false)} />}
     </div>
   )
 }

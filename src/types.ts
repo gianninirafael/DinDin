@@ -39,6 +39,16 @@ export interface Caixinha {
   order?: number
 }
 
+// ---- Contas fixas (Fase 6) ----
+
+export interface FixedBill {
+  id: string
+  name: string
+  amount: number
+  dueDay: number // day of month 1..31
+  order?: number
+}
+
 // ---- Hábitos (Fase 5, experimental, self-contained) ----
 
 export interface Habit {
