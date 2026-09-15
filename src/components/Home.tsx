@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
-import { useStore, useCategoryMap, monthTransactions, monthTotals, netWorth } from '../store'
-import { formatAmount, formatMoney, dayHeading, monthShort } from '../lib/format'
+import { useStore, useCategoryMap, monthTransactions, monthTotals } from '../store'
+import { formatAmount, dayHeading, monthShort } from '../lib/format'
 import type { Transaction } from '../types'
 import PendingAlert from './PendingAlert'
 
@@ -21,26 +21,12 @@ function groupByDay(txs: Transaction[]) {
 
 export default function Home({
   onSelect,
-  onOpenCaixinhas,
-  onOpenDesejos,
-  onOpenContas,
 }: {
   onSelect: (tx: Transaction) => void
-  onOpenCaixinhas: () => void
-  onOpenDesejos: () => void
-  onOpenContas: () => void
 }) {
-  const { transactions, activeMonth, caixinhas, desejos, accounts } = useStore()
+  const { transactions, activeMonth, accounts } = useStore()
   const catMap = useCategoryMap()
   const accountMap = useMemo(() => Object.fromEntries(accounts.map((a) => [a.id, a])), [accounts])
-  const totalSaved = useMemo(() => caixinhas.reduce((s, c) => s + c.balance, 0), [caixinhas])
-  const patrimonio = useMemo(() => netWorth(accounts, transactions), [accounts, transactions])
-  const nContas = accounts.filter((a) => !a.archived).length
-  const openDesejos = useMemo(() => desejos.filter((d) => d.status === 'aberto').length, [desejos])
-  const economizado = useMemo(
-    () => desejos.filter((d) => d.status === 'deixei_passar').reduce((s, d) => s + d.amount, 0),
-    [desejos],
-  )
 
   const monthTxs = useMemo(
     () => monthTransactions(transactions, activeMonth),
@@ -75,57 +61,6 @@ export default function Home({
           <MiniStat label="Despesas" value={totals.expense} tone="text-rose-400" prefix="−" />
           <MiniStat label="Receitas" value={totals.income} tone="text-emerald-400" prefix="+" />
         </div>
-
-        <button
-          onClick={onOpenContas}
-          className="mt-3 flex w-full items-center gap-3 rounded-card bg-ink-soft px-4 py-3 text-left active:bg-ink-muted"
-        >
-          <span className="text-xl">🏦</span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[15px] font-semibold text-white">Contas</span>
-            <span className="block text-xs text-neutral-500">
-              {nContas > 1 ? `${nContas} contas · patrimônio` : 'Saldo por conta · patrimônio'}
-            </span>
-          </span>
-          <span className={`tnum text-[15px] font-bold ${patrimonio < 0 ? 'text-rose-400' : 'text-brand-400'}`}>
-            {patrimonio < 0 ? '−' : ''}{formatMoney(Math.abs(patrimonio))}
-          </span>
-          <span className="text-neutral-400">›</span>
-        </button>
-
-        <button
-          onClick={onOpenCaixinhas}
-          className="mt-2 flex w-full items-center gap-3 rounded-card bg-ink-soft px-4 py-3 text-left active:bg-ink-muted"
-        >
-          <span className="text-xl">🐷</span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[15px] font-semibold text-white">Caixinhas</span>
-            <span className="block text-xs text-neutral-500">
-              {caixinhas.length === 0 ? 'Guarde sobra, metas, resistência' : `${caixinhas.length} caixinha${caixinhas.length > 1 ? 's' : ''}`}
-            </span>
-          </span>
-          <span className="tnum text-[15px] font-bold text-brand-400">{formatMoney(totalSaved)}</span>
-          <span className="text-neutral-400">›</span>
-        </button>
-
-        <button
-          onClick={onOpenDesejos}
-          className="mt-2 flex w-full items-center gap-3 rounded-card bg-ink-soft px-4 py-3 text-left active:bg-ink-muted"
-        >
-          <span className="text-xl">💭</span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[15px] font-semibold text-white">Desejos</span>
-            <span className="block text-xs text-neutral-500">
-              {openDesejos === 0
-                ? 'Espere 24h antes de comprar por impulso'
-                : `${openDesejos} na espera${economizado > 0 ? ' · já economizou deixando passar' : ''}`}
-            </span>
-          </span>
-          {economizado > 0 && (
-            <span className="tnum text-[15px] font-bold text-emerald-400">{formatMoney(economizado)}</span>
-          )}
-          <span className="text-neutral-400">›</span>
-        </button>
       </div>
 
       {/* Day groups */}

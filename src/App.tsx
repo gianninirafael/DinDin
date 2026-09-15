@@ -99,12 +99,7 @@ export default function App() {
   return (
     <div className="min-h-full bg-ink">
       {tab === 'home' ? (
-        <Home
-          onSelect={setEditingTx}
-          onOpenCaixinhas={() => setCaixinhasOpen(true)}
-          onOpenDesejos={() => setDesejosOpen(true)}
-          onOpenContas={() => setContasOpen(true)}
-        />
+        <Home onSelect={setEditingTx} />
       ) : tab === 'today' ? (
         <Today />
       ) : tab === 'budget' ? (
@@ -130,10 +125,10 @@ export default function App() {
       {/* Data menu (top-left floating): export CSV, backup, restore */}
       <button
         onClick={() => setDataOpen(true)}
-        aria-label="Dados e backup"
-        className="fixed left-4 top-7 z-20 grid h-9 w-9 place-items-center rounded-full bg-ink-muted text-base text-white active:bg-ink-line"
+        aria-label="Menu"
+        className="fixed left-4 top-7 z-20 grid h-9 w-9 place-items-center rounded-full bg-ink-muted text-lg text-white active:bg-ink-line"
       >
-        ⤓
+        ☰
       </button>
 
       <input
@@ -146,9 +141,36 @@ export default function App() {
 
       {dataOpen && (
         <div className="fixed inset-0 z-40 flex items-end bg-black/60" onClick={() => setDataOpen(false)}>
-          <div className="w-full rounded-t-3xl bg-ink-soft p-4 pb-8" onClick={(e) => e.stopPropagation()}>
+          <div className="max-h-[85vh] w-full overflow-y-auto rounded-t-3xl bg-ink-soft p-4 pb-8" onClick={(e) => e.stopPropagation()}>
             <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-ink-line" />
-            <h3 className="mb-3 px-2 text-sm font-semibold text-neutral-500">Dados e backup</h3>
+            <h3 className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">Ferramentas</h3>
+            <div className="space-y-2">
+              <DataAction
+                icon="🏦"
+                title="Contas"
+                subtitle="Saldo por conta e patrimônio"
+                onClick={() => { setDataOpen(false); setContasOpen(true) }}
+              />
+              <DataAction
+                icon="🐷"
+                title="Caixinhas"
+                subtitle="Metas, sobra e resistência"
+                onClick={() => { setDataOpen(false); setCaixinhasOpen(true) }}
+              />
+              <DataAction
+                icon="💭"
+                title="Desejos"
+                subtitle="Pausa de 24h antes de comprar por impulso"
+                onClick={() => { setDataOpen(false); setDesejosOpen(true) }}
+              />
+              <DataAction
+                icon="🚬"
+                title="Hábitos (beta)"
+                subtitle="Rastreio de vícios — separado do orçamento"
+                onClick={() => { setDataOpen(false); setHabitsOpen(true) }}
+              />
+            </div>
+            <h3 className="mb-2 mt-5 px-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">Dados e backup</h3>
             <div className="space-y-2">
               <DataAction
                 icon="🧾"
@@ -173,12 +195,6 @@ export default function App() {
                 title={`Som dos toques: ${soundOn ? 'ligado' : 'desligado'}`}
                 subtitle="Clique suave ao tocar nos botões"
                 onClick={toggleSound}
-              />
-              <DataAction
-                icon="🚬"
-                title="Hábitos (beta)"
-                subtitle="Rastreio de vícios — separado do orçamento"
-                onClick={() => { setDataOpen(false); setHabitsOpen(true) }}
               />
             </div>
           </div>

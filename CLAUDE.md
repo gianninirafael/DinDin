@@ -41,7 +41,13 @@ numbers, generous spacing, pill buttons, layered near-black surfaces.
 - Category color bubbles: icon on a tinted circle (`color + '33'` on dark).
 - Rounded corners: `rounded-card` (20px) for cards, full rounds for bubbles,
   pills/chips for buttons and toggles.
-- Font: Inter.
+- Font: **Manrope**, self-hosted via `@fontsource-variable/manrope` (imported in
+  `main.tsx`) — no external font request, so it respects the "nothing leaves the
+  browser" rule. Set in `tailwind.config.js` `fontFamily.sans`.
+- **Home stays lean for daily entry:** the top-left **☰ menu** holds all the
+  secondary tools (Contas, Caixinhas, Desejos, Hábitos) plus Dados e backup.
+  Home itself is just the month hero + Despesas/Receitas + the day list; the
+  `PendingAlert` banner is the one exception that surfaces there.
 
 When the owner shares more Wise screenshots, match spacing/typography/contrast
 from them — treat those as the source of truth for visual polish.
@@ -149,7 +155,7 @@ Two live builds from this one repo, both on GitHub Pages (same origin):
   tab) shows "posso gastar" for dia/semana/mês = teto − gasto (cap categories),
   day resets daily, week/month keep counting. Cap toggle set in the Budget sheet.
 - **Fase 3 — caixinha mechanism:** `Caixinha` + `Pendencia` entities (DB v3,
-  stores `caixinhas`/`pendencias`). `Caixinhas.tsx` (opened from a Home card):
+  stores `caixinhas`/`pendencias`). `Caixinhas.tsx` (opened from the ☰ menu):
   create/edit (acumulativa / alvo_fixo / meta_com_prazo), "Guardar agora"
   (direct `depositToCaixinha`) or "Guardar depois" (`createPendencia`).
   `PendingAlert.tsx` is the persistent home banner for pending pendências;
@@ -192,7 +198,7 @@ Two live builds from this one repo, both on GitHub Pages (same origin):
     `monthImpulse(txs, monthKey)` sums flagged expenses (excludes reimbursed);
     shown on the Desejos screen. Purely a label — no effect on budget/cap math.
   - *Desejos + pausa 24h:* `Desejo` (DB v6, store `desejos`) + `Desejos.tsx`,
-    opened from a "💭 Desejos" Home card. Add name+valor → starts `aberto` and
+    opened from the ☰ menu. Add name+valor → starts `aberto` and
     paused; `DESEJO_COOLDOWN_MS` (24h) must pass (`releaseAt`) before you can
     decide. `decideDesejo` sets `comprei` or `deixei_passar` — no transaction is
     created (buys are logged normally; letting go counts as saved). Home card +
@@ -214,7 +220,7 @@ Two live builds from this one repo, both on GitHub Pages (same origin):
   - AddSheet: expense/income show an account chip strip (only when >1 account);
     the Transferência tab replaces the category grid with a De→Para account
     picker and requires `accountId !== toAccountId` (categoryId = '').
-  - `Contas.tsx` (opened from a "🏦 Contas" Home card): patrimônio hero + per-
+  - `Contas.tsx` (opened from the ☰ menu): patrimônio hero + per-
     account balance, create/edit sheet (name, emoji, color, saldo inicial). The
     default account can't be deleted. Home renders transfers as "⇄ De → Para",
     neutral, uncounted. Wise / Nubank PJ / Nubank PF are the intended accounts.

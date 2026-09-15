@@ -28,7 +28,7 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['"Manrope Variable"', 'Manrope', 'system-ui', 'sans-serif'],
       },
       borderRadius: {
         card: '1.25rem',
