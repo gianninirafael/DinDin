@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
-import { useStore, useCategoryMap, monthTransactions, monthTotals } from '../store'
-import { formatAmount, dayHeading, monthShort } from '../lib/format'
+import { useStore, useCategoryMap, monthTransactions, monthTotals, txBelongsToAccount, accountBalance } from '../store'
+import { formatAmount, formatMoney, dayHeading, monthShort } from '../lib/format'
 import type { Transaction } from '../types'
 import PendingAlert from './PendingAlert'
 
@@ -24,16 +24,34 @@ export default function Home({
 }: {
   onSelect: (tx: Transaction) => void
 }) {
-  const { transactions, activeMonth, accounts } = useStore()
+  const { transactions, activeMonth, accounts, homeAccount, setHomeAccount } = useStore()
   const catMap = useCategoryMap()
   const accountMap = useMemo(() => Object.fromEntries(accounts.map((a) => [a.id, a])), [accounts])
 
+  const visibleAccounts = useMemo(() => accounts.filter((a) => !a.archived), [accounts])
+  const showAccountBar = visibleAccounts.length > 1
+  // Effective filter: only when it points at a still-existing account and there's
+  // more than one account to choose from; otherwise it's the "visão geral".
+  const activeAccount =
+    showAccountBar && homeAccount && visibleAccounts.some((a) => a.id === homeAccount)
+      ? homeAccount
+      : null
+  const activeAccountObj = activeAccount ? accountMap[activeAccount] : undefined
+
+  const scoped = useMemo(
+    () => (activeAccount ? transactions.filter((t) => txBelongsToAccount(t, activeAccount)) : transactions),
+    [transactions, activeAccount],
+  )
   const monthTxs = useMemo(
-    () => monthTransactions(transactions, activeMonth),
-    [transactions, activeMonth],
+    () => monthTransactions(scoped, activeMonth),
+    [scoped, activeMonth],
   )
   const totals = useMemo(() => monthTotals(monthTxs), [monthTxs])
   const groups = useMemo(() => groupByDay(monthTxs), [monthTxs])
+  const currentBalance = useMemo(
+    () => (activeAccountObj ? accountBalance(activeAccountObj, transactions) : 0),
+    [activeAccountObj, transactions],
+  )
   const [y] = activeMonth.split('-')
 
   return (
@@ -42,9 +60,34 @@ export default function Home({
         <PendingAlert />
       </div>
 
-      {/* Hero: month balance */}
+      {/* Account switcher — "visão geral" + one chip per account */}
+      {showAccountBar && (
+        <div className="no-scrollbar mb-1 flex gap-2 overflow-x-auto px-5 pb-1">
+          <AccountTab
+            label="Visão geral"
+            icon="🗂️"
+            color="#ffc400"
+            active={activeAccount === null}
+            onClick={() => setHomeAccount(null)}
+          />
+          {visibleAccounts.map((a) => (
+            <AccountTab
+              key={a.id}
+              label={a.name}
+              icon={a.icon}
+              color={a.color}
+              active={activeAccount === a.id}
+              onClick={() => setHomeAccount(a.id)}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Hero: month balance (scoped to the active account when filtered) */}
       <div className="px-5 pb-5">
-        <p className="text-sm font-medium uppercase tracking-wide text-neutral-500">Saldo do mês</p>
+        <p className="text-sm font-medium uppercase tracking-wide text-neutral-500">
+          {activeAccountObj ? `Saldo do mês · ${activeAccountObj.name}` : 'Saldo do mês'}
+        </p>
         <div className="mt-1 flex items-end gap-2">
           <span
             className={`tnum text-5xl font-extrabold tracking-tight ${
@@ -56,6 +99,14 @@ export default function Home({
           </span>
           <span className="pb-1.5 text-base font-semibold text-neutral-500">BRL</span>
         </div>
+        {activeAccountObj && (
+          <p className="mt-1 text-xs text-neutral-500">
+            Saldo atual da conta:{' '}
+            <span className={`tnum font-semibold ${currentBalance < 0 ? 'text-rose-400' : 'text-neutral-300'}`}>
+              {currentBalance < 0 ? '−' : ''}{formatMoney(Math.abs(currentBalance))}
+            </span>
+          </p>
+        )}
 
         <div className="mt-5 grid grid-cols-2 gap-3">
           <MiniStat label="Despesas" value={totals.expense} tone="text-rose-400" prefix="−" />
@@ -144,6 +195,34 @@ export default function Home({
         })}
       </div>
     </div>
+  )
+}
+
+function AccountTab({
+  label,
+  icon,
+  color,
+  active,
+  onClick,
+}: {
+  label: string
+  icon: string
+  color: string
+  active: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex flex-shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold transition"
+      style={{
+        background: active ? color : 'rgba(255,255,255,0.06)',
+        color: active ? '#000' : '#d4d4d4',
+      }}
+    >
+      <span className="text-[13px]">{icon}</span>
+      <span>{label}</span>
+    </button>
   )
 }
 

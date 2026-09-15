@@ -21,7 +21,7 @@ import VoiceSheet from './components/VoiceSheet'
 type Tab = 'home' | 'today' | 'budget' | 'charts'
 
 export default function App() {
-  const { load, loaded, transactions, categories, activeMonth, setActiveMonth, importBackup } =
+  const { load, loaded, transactions, categories, activeMonth, setActiveMonth, importBackup, homeAccount } =
     useStore()
   const catMap = useCategoryMap()
 
@@ -266,8 +266,8 @@ export default function App() {
         </button>
       </nav>
 
-      {sheetOpen && <AddSheet editing={editingTx} onClose={closeSheet} />}
-      {voiceOpen && <VoiceSheet onClose={() => setVoiceOpen(false)} />}
+      {sheetOpen && <AddSheet editing={editingTx} onClose={closeSheet} defaultAccountId={homeAccount} />}
+      {voiceOpen && <VoiceSheet onClose={() => setVoiceOpen(false)} defaultAccountId={homeAccount} />}
       {caixinhasOpen && <Caixinhas onClose={() => setCaixinhasOpen(false)} />}
       {habitsOpen && <Habits onClose={() => setHabitsOpen(false)} />}
       {planejarOpen && <Planejar onClose={() => setPlanejarOpen(false)} />}

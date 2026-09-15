@@ -24,8 +24,17 @@ function mmss(s: number) {
   return `${m}:${r.toString().padStart(2, '0')}`
 }
 
-export default function VoiceSheet({ onClose }: { onClose: () => void }) {
-  const { categories, addTransactions } = useStore()
+export default function VoiceSheet({
+  onClose,
+  defaultAccountId,
+}: {
+  onClose: () => void
+  defaultAccountId?: string | null
+}) {
+  const { categories, addTransactions, accounts, lastAccountId } = useStore()
+  const targetAccountId = defaultAccountId ?? lastAccountId
+  const targetAccount = accounts.find((a) => a.id === targetAccountId)
+  const showTarget = accounts.filter((a) => !a.archived).length > 1
   const [stage, setStage] = useState<Stage>(getApiKey() ? 'idle' : 'key')
   const [keyInput, setKeyInput] = useState(getApiKey())
   const [seconds, setSeconds] = useState(0)
@@ -149,6 +158,7 @@ export default function VoiceSheet({ onClose }: { onClose: () => void }) {
         categoryId: r.categoryId as string,
         note: r.name.trim() || undefined,
         date: r.date,
+        accountId: targetAccountId,
       })),
     )
     playConfirm()
@@ -295,6 +305,13 @@ export default function VoiceSheet({ onClose }: { onClose: () => void }) {
             <p className="px-1 pb-2 text-sm text-neutral-400">
               Confira os {rows.length} lançamentos, ajuste o que precisar e escolha a categoria.
             </p>
+            {showTarget && targetAccount && (
+              <div className="mb-2 flex items-center gap-2 rounded-xl bg-ink-soft px-3 py-2 text-sm">
+                <span>{targetAccount.icon}</span>
+                <span className="text-neutral-400">Vai para a conta</span>
+                <span className="font-semibold text-white">{targetAccount.name}</span>
+              </div>
+            )}
             <div className="space-y-2">
               {rows.map((r, i) => {
                 const opts = catOptions(r.kind)

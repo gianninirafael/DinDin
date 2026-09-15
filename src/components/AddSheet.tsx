@@ -22,9 +22,11 @@ function amountToRaw(n: number): string {
 export default function AddSheet({
   editing,
   onClose,
+  defaultAccountId,
 }: {
   editing?: Transaction | null
   onClose: () => void
+  defaultAccountId?: string | null
 }) {
   const {
     addTransaction, updateTransaction, removeTransaction, createPendencia, categories, lastDate,
@@ -40,7 +42,7 @@ export default function AddSheet({
   const [date, setDate] = useState(editing?.date ?? lastDate)
   const [reimbursable, setReimbursable] = useState(editing?.reimbursable ?? false)
   const [impulse, setImpulse] = useState(editing?.impulse ?? false)
-  const [accountId, setAccountId] = useState<string>(editing?.accountId ?? lastAccountId)
+  const [accountId, setAccountId] = useState<string>(editing?.accountId ?? defaultAccountId ?? lastAccountId)
   const [toAccountId, setToAccountId] = useState<string | null>(editing?.toAccountId ?? null)
 
   const [manageMode, setManageMode] = useState(false)

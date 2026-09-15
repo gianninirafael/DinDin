@@ -224,6 +224,17 @@ Two live builds from this one repo, both on GitHub Pages (same origin):
     account balance, create/edit sheet (name, emoji, color, saldo inicial). The
     default account can't be deleted. Home renders transfers as "⇄ De → Para",
     neutral, uncounted. Wise / Nubank PJ / Nubank PF are the intended accounts.
+  - **Início account switcher (one-app-at-a-time flow):** `homeAccount`
+    (store-only, not persisted; null = "Visão geral") drives a chip row atop the
+    Home — shown only when >1 account. Selecting an account scopes **only the
+    Home** (month hero, Despesas/Receitas, day list) to it via
+    `txBelongsToAccount` (transfers show for origem OR destino; legacy no-account
+    rows fall to the default account); Orçamento/teto and Gráficos stay global.
+    The scoped hero shows "Saldo do mês · <conta>" plus a "Saldo atual da conta"
+    line. Being "in" an account also makes new entries land there: App passes
+    `homeAccount` as `defaultAccountId` to AddSheet (overrides `lastAccountId`)
+    and to VoiceSheet (stamps every dictated row's `accountId`, shown as "Vai
+    para a conta X" on the review). Visão geral falls back to `lastAccountId`.
 
 ## Roadmap / not built yet
 

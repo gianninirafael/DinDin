@@ -107,6 +107,8 @@ interface State {
   setHourlyRate: (value: number) => void
   lastAccountId: string // sticky account for the next new entry (Fase 8)
   setLastAccountId: (id: string) => void
+  homeAccount: string | null // Início filter: null = visão geral, else one account (Fase 8b)
+  setHomeAccount: (id: string | null) => void
   load: () => Promise<void>
   addTransaction: (tx: Omit<Transaction, 'id' | 'createdAt'>) => Promise<string>
   updateTransaction: (tx: Transaction) => Promise<void>
@@ -158,6 +160,7 @@ export const useStore = create<State>((set, get) => ({
   weeklyWallet: readWeekly(),
   hourlyRate: readHourly(),
   lastAccountId: readLastAccount(),
+  homeAccount: null,
 
   setAvailableToBudget: (value) => {
     try {
@@ -194,6 +197,8 @@ export const useStore = create<State>((set, get) => ({
     }
     set({ lastAccountId: id })
   },
+
+  setHomeAccount: (id) => set({ homeAccount: id }),
 
   load: async () => {
     const [transactions, categories, caixinhas, pendencias, habits, habitEntries] =
@@ -497,6 +502,7 @@ export const useStore = create<State>((set, get) => ({
     const next = get().accounts.filter((a) => a.id !== id)
     set({ accounts: next })
     if (get().lastAccountId === id) get().setLastAccountId(DEFAULT_ACCOUNT_ID)
+    if (get().homeAccount === id) set({ homeAccount: null })
   },
 
   setActiveMonth: (activeMonth) => set({ activeMonth }),
@@ -586,6 +592,17 @@ export function accountBalance(acc: Account, txs: Transaction[]): number {
     }
   }
   return bal
+}
+
+/**
+ * Whether a transaction belongs to an account's scoped view (Início filter).
+ * Legacy rows with no accountId count toward the default account. A transfer
+ * shows for both sides (origem or destino).
+ */
+export function txBelongsToAccount(t: Transaction, accId: string): boolean {
+  const owns = t.accountId === accId || (accId === DEFAULT_ACCOUNT_ID && !t.accountId)
+  if (t.kind === 'transfer') return owns || t.toAccountId === accId
+  return owns
 }
 
 /** Total across all non-archived accounts (patrimônio). */
